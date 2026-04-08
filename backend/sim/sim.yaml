@@ -1,0 +1,4 @@
+mode: mixed
+# options: normal | attack | mixed
+
+attack_start_after: 10   # seconds before attack ECUs are injected
