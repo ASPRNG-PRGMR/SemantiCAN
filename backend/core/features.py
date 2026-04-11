@@ -1,25 +1,28 @@
 class FeatureExtractor:
-    def __init__(self):
-        self.prev_velocity = None
-        self.prev_time = None
+    """
+    Per-ECU derived feature extraction.
+    Keeps a separate velocity/time history per node_id so that
+    ECU_002's velocity delta is never mixed with ECU_001's acceleration.
+    """
 
-    def extract(self, timestamp, message):
+    def __init__(self):
+        self._prev: dict = {}   # node_id -> {"velocity": float, "time": float}
+
+    def extract(self, timestamp: float, message: dict) -> dict:
+        node_id  = message.get("node_id", "__global__")
+        velocity = float(message.get("velocity", 0.0))
         features = {}
 
-        # Safe fallback if velocity is absent
-        velocity = message.get("velocity", self.prev_velocity or 0.0)
-
-        if self.prev_velocity is not None and self.prev_time is not None:
-            dt = timestamp - self.prev_time
+        prev = self._prev.get(node_id)
+        if prev is not None:
+            dt = timestamp - prev["time"]
             if dt > 0:
-                dv = velocity - self.prev_velocity
-                features["derived_acceleration"] = dv / dt
+                features["derived_acceleration"] = (velocity - prev["velocity"]) / dt
             else:
                 features["derived_acceleration"] = 0.0
         else:
+            # First message for this ECU — no history yet, can't derive
             features["derived_acceleration"] = 0.0
 
-        self.prev_velocity = velocity
-        self.prev_time = timestamp
-
+        self._prev[node_id] = {"velocity": velocity, "time": timestamp}
         return features

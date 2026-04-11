@@ -1,18 +1,9 @@
-# Core backend
-flask>=3.0.0
-requests>=2.31.0
-python-dotenv>=1.0.0
-
-# Frontend dashboard
-dash>=2.16.0
-dash-bootstrap-components>=1.6.0
-plotly>=5.22.0
-
-# Optional — needed only if using NVIDIA NIM AI advisory
-# (the system falls back gracefully without this)
-# nvidia-api-key is loaded from .env, no extra package needed
-
-# Dev / type hints (optional)
-# mypy
-# black
-# ruff
+flask>=3.0
+dash>=2.16
+dash-bootstrap-components>=1.6
+plotly
+requests>=2.31
+numpy>=1.26
+torch>=2.2
+python-dotenv>=1.0
+pyyaml>=6.0

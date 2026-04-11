@@ -1,229 +1,272 @@
-import requests
-import plotly.graph_objs as go
-from dash import Input, Output, html
-from dash.exceptions import PreventUpdate
+"""
+Dash callbacks — pull data from Flask API and update all dashboard components.
+"""
 
-from frontend.dashboard.app import app
-from frontend.config import (
-    SUMMARY_URL,
-    ALERTS_URL,
-    HISTORY_URL,
-    RATE_URL,
-    TOP_ECUS_URL,
+import requests
+from dash import Input, Output, html
+import plotly.graph_objects as go
+
+from frontend.config import API_BASE
+
+CHART_LAYOUT = dict(
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor ="rgba(0,0,0,0)",
+    font         =dict(color="#8b949e", size=11, family="JetBrains Mono, monospace"),
+    margin       =dict(l=40, r=10, t=10, b=40),
+    xaxis        =dict(gridcolor="#21262d", linecolor="#30363d", showgrid=True),
+    yaxis        =dict(gridcolor="#21262d", linecolor="#30363d", showgrid=True),
+    legend       =dict(bgcolor="rgba(0,0,0,0)", font=dict(size=10)),
+    hovermode    ="x unified",
 )
 
-# ── Palette ──
-COLOR_SAFE     = "#00e5ff"
-COLOR_WARN     = "#ffb300"
-COLOR_CRITICAL = "#ff1744"
-COLOR_BG       = "#0d1117"
-COLOR_PANEL    = "#161b22"
-COLOR_TEXT     = "#c9d1d9"
-
 SEVERITY_COLOR = {
-    "critical": COLOR_CRITICAL,
-    "high":     COLOR_WARN,
-    "medium":   "#ff6d00",
-    "low":      COLOR_SAFE,
+    "critical": "#f85149",
+    "high":     "#d29922",
+    "medium":   "#58a6ff",
+    "low":      "#3fb950",
 }
 
+ECU_COLORS = [
+    "#58a6ff", "#3fb950", "#d29922", "#f85149",
+    "#bc8cff", "#79c0ff", "#56d364", "#ffa657",
+]
 
-def _get(url: str, default):
+# Max anomalous ECU lines to show individually (keeps chart readable)
+MAX_ANOMALOUS_LINES = 5
+
+
+def _get(endpoint: str, fallback=None):
     try:
-        r = requests.get(url, timeout=2)
+        r = requests.get(f"{API_BASE}{endpoint}", timeout=2)
         r.raise_for_status()
         return r.json()
     except Exception:
-        return default
+        return fallback
 
 
-# ────────────────────────────────────────────────
-# KPI cards
-# ────────────────────────────────────────────────
-@app.callback(
-    Output("kpi-active-ecus",    "children"),
-    Output("kpi-anomalous-ecus", "children"),
-    Output("kpi-last-anomaly",   "children"),
-    Input("interval", "n_intervals"),
-)
-def update_kpis(_):
-    summary = _get(SUMMARY_URL, {})
-    active    = summary.get("active_ecus",    "—")
-    anomalous = summary.get("anomalous_ecus", "—")
-    last_ts   = summary.get("last_anomaly")
-    last_str  = last_ts[:19].replace("T", " ") if last_ts else "—"
-    return active, anomalous, last_str
+def register_callbacks(app):
 
+    @app.callback(
+        Output("kpi-active",   "children"),
+        Output("kpi-anomalous","children"),
+        Output("kpi-last",     "children"),
+        Output("kpi-anomalous","className"),
+        Input("tick", "n_intervals"),
+    )
+    def update_kpis(_):
+        data = _get("/api/summary", {})
+        active    = data.get("active_ecus",    0)
+        anomalous = data.get("anomalous_ecus", 0)
+        last      = data.get("last_anomaly",   "—")
 
-# ────────────────────────────────────────────────
-# Semantic confidence history chart
-# ────────────────────────────────────────────────
-@app.callback(
-    Output("graph-history", "figure"),
-    Input("interval", "n_intervals"),
-)
-def update_history(_):
-    data = _get(HISTORY_URL, [])
+        if last and last != "—":
+            last = last[11:19]   # show HH:MM:SS only
 
-    fig = go.Figure()
+        cls = "kpi-value danger" if anomalous > 0 else "kpi-value ok"
+        return str(active), str(anomalous), last, cls
 
-    if data:
-        # Group by node_id for colour separation
-        by_node: dict = {}
-        for pt in data:
-            by_node.setdefault(pt["node_id"], {"x": [], "y": []})
-            by_node[pt["node_id"]]["x"].append(pt["timestamp"])
-            by_node[pt["node_id"]]["y"].append(pt["confidence"])
+    # ── Confidence history chart ───────────────────────────────────────
+    @app.callback(
+        Output("chart-confidence", "figure"),
+        Input("tick", "n_intervals"),
+    )
+    def update_confidence(_):
+        data = _get("/api/semantic-history", [])
+        fig  = go.Figure(layout=CHART_LAYOUT)
 
-        for node_id, pts in by_node.items():
-            last_conf = pts["y"][-1] if pts["y"] else 0
-            color = COLOR_CRITICAL if last_conf >= 60 else COLOR_SAFE
+        if not data:
+            fig.add_annotation(text="Awaiting data...", showarrow=False,
+                               font=dict(color="#8b949e"))
+            return fig
+
+        # Group by ECU, keep only last 20 readings per ECU
+        by_ecu: dict = {}
+        for row in data:
+            by_ecu.setdefault(row["node_id"], []).append(row)
+        for k in by_ecu:
+            by_ecu[k] = sorted(by_ecu[k], key=lambda r: r["timestamp"])[-20:]
+
+        # An ECU is anomalous if its LATEST confidence >= 70
+        anomalous = [
+            k for k, rows in by_ecu.items()
+            if rows and rows[-1]["confidence"] >= 70
+        ]
+
+        # ── Normal baseline: single average band ─────────────────────
+        normal_ecus = [k for k in by_ecu if k not in anomalous]
+        if normal_ecus:
+            time_vals: dict = {}
+            for eid in normal_ecus:
+                for r in by_ecu[eid]:
+                    t = r["timestamp"][11:19]
+                    time_vals.setdefault(t, []).append(r["confidence"])
+            times = sorted(time_vals)
+            avgs  = [sum(time_vals[t]) / len(time_vals[t]) for t in times]
             fig.add_trace(go.Scatter(
-                x=pts["x"], y=pts["y"],
+                x=times, y=avgs,
+                name=f"Normal ({len(normal_ecus)} ECUs avg)",
                 mode="lines",
-                name=node_id,
-                line=dict(color=color, width=1.5),
-                opacity=0.85,
+                line=dict(color="#3fb950", width=1.5, dash="dot"),
+                opacity=0.5,
             ))
 
-    fig.update_layout(
-        paper_bgcolor=COLOR_BG,
-        plot_bgcolor=COLOR_PANEL,
-        font=dict(color=COLOR_TEXT),
-        margin=dict(l=40, r=20, t=20, b=40),
-        legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=10)),
-        xaxis=dict(gridcolor="#21262d", showgrid=True),
-        yaxis=dict(gridcolor="#21262d", showgrid=True, range=[0, 105],
-                   title="Confidence / Risk Score"),
+        # ── Anomalous ECUs: top N by confidence, individual lines ─────
+        # Sort by latest confidence descending and cap to MAX_ANOMALOUS_LINES
+        anomalous_sorted = sorted(
+            anomalous,
+            key=lambda k: by_ecu[k][-1]["confidence"] if by_ecu[k] else 0,
+            reverse=True,
+        )[:MAX_ANOMALOUS_LINES]
+
+        alert_colors = ["#f85149", "#d29922", "#bc8cff", "#ffa657", "#79c0ff"]
+        for i, ecu_id in enumerate(anomalous_sorted):
+            rows  = by_ecu[ecu_id]
+            color = alert_colors[i % len(alert_colors)]
+            fig.add_trace(go.Scatter(
+                x    =[r["timestamp"][11:19] for r in rows],
+                y    =[r["confidence"]        for r in rows],
+                name =ecu_id,
+                mode ="lines+markers",
+                line =dict(color=color, width=2.5),
+                marker=dict(size=5),
+            ))
+
+        # If there are more anomalous ECUs than MAX_ANOMALOUS_LINES, show a note
+        extra = len(anomalous) - MAX_ANOMALOUS_LINES
+        if extra > 0:
+            fig.add_annotation(
+                text=f"+{extra} more anomalous ECUs",
+                xref="paper", yref="paper", x=1.0, y=1.02,
+                showarrow=False,
+                font=dict(color="#8b949e", size=10),
+                xanchor="right",
+            )
+
+        if not anomalous and not normal_ecus:
+            fig.add_annotation(text="No ECU data yet", showarrow=False,
+                               font=dict(color="#8b949e"))
+
+        fig.update_layout(
+            yaxis=dict(range=[0, 105], title="Confidence",
+                       gridcolor="#21262d", linecolor="#30363d"),
+            xaxis=dict(gridcolor="#21262d", linecolor="#30363d",
+                       tickangle=-45, nticks=8),
+        )
+        return fig
+
+    # ── Violation rate chart ───────────────────────────────────────────
+    @app.callback(
+        Output("chart-violation-rate", "figure"),
+        Input("tick", "n_intervals"),
     )
-    return fig
+    def update_violation_rate(_):
+        data = _get("/api/violation-rate", [])
+        fig  = go.Figure(layout=CHART_LAYOUT)
 
+        if not data:
+            fig.add_annotation(text="Awaiting data...", showarrow=False,
+                               font=dict(color="#8b949e"))
+            return fig
 
-# ────────────────────────────────────────────────
-# Violation rate chart
-# ────────────────────────────────────────────────
-@app.callback(
-    Output("graph-violation-rate", "figure"),
-    Input("interval", "n_intervals"),
-)
-def update_violation_rate(_):
-    data = _get(RATE_URL, [])
+        times  = [d["time"]  for d in data]
+        counts = [d["count"] for d in data]
 
-    times  = [d["time"]  for d in data]
-    counts = [d["count"] for d in data]
+        max_count = max(counts) if counts else 1
 
-    fig = go.Figure(go.Bar(
-        x=times, y=counts,
-        marker_color=COLOR_WARN,
-        opacity=0.85,
-    ))
-    fig.update_layout(
-        paper_bgcolor=COLOR_BG,
-        plot_bgcolor=COLOR_PANEL,
-        font=dict(color=COLOR_TEXT),
-        margin=dict(l=40, r=20, t=20, b=40),
-        xaxis=dict(gridcolor="#21262d", tickangle=-45),
-        yaxis=dict(gridcolor="#21262d", title="Violations"),
-    )
-    return fig
-
-
-# ────────────────────────────────────────────────
-# Top anomalous ECUs
-# ────────────────────────────────────────────────
-@app.callback(
-    Output("top-ecus-panel", "children"),
-    Input("interval", "n_intervals"),
-)
-def update_top_ecus(_):
-    ecus = _get(TOP_ECUS_URL, [])
-
-    if not ecus:
-        return html.P("No anomalous ECUs detected.", className="panel-empty")
-
-    rows = []
-    for ecu in ecus:
-        conf = ecu.get("confidence", 0)
-        bar_color = COLOR_CRITICAL if conf >= 75 else COLOR_WARN
-        rows.append(html.Div([
-            html.Div([
-                html.Span(ecu["node_id"], className="ecu-id"),
-                html.Span(f"{conf:.0f}%", className="ecu-score"),
-            ], className="ecu-row-header"),
-            html.Div(className="ecu-bar-bg", children=[
-                html.Div(style={
-                    "width": f"{conf}%",
-                    "background": bar_color,
-                    "height": "6px",
-                    "borderRadius": "3px",
-                    "transition": "width 0.4s ease",
-                })
-            ]),
-            html.P(
-                ecu.get("last_seen", "")[:19].replace("T", " "),
-                className="ecu-lastseen",
+        fig.add_trace(go.Bar(
+            x=times, y=counts,
+            marker_color="#f85149",
+            marker_line_width=0,
+            name="Violations",
+        ))
+        fig.update_layout(
+            yaxis=dict(
+                title="Count",
+                # Add 20% headroom above max, minimum range of 4 so zero bars
+                # don't look full-height on an empty chart
+                range=[0, max(max_count * 1.2, 4)],
+                dtick=1,
             ),
-        ], className="ecu-card"))
+            showlegend=False,
+        )
+        return fig
 
-    return rows
+    # ── Top anomalous ECUs ────────────────────────────────────────────
+    @app.callback(
+        Output("top-ecus", "children"),
+        Input("tick", "n_intervals"),
+    )
+    def update_top_ecus(_):
+        data = _get("/api/top-anomalous-ecus", [])
+        if not data:
+            return html.Div("No anomalous ECUs detected.",
+                            style={"color": "#8b949e", "fontSize": "12px"})
 
+        rows = []
+        for item in data:
+            pct = item["confidence"]
+            rows.append(html.Div([
+                html.Div([
+                    html.Span(item["node_id"], style={"color": "#58a6ff", "fontWeight": "bold"}),
+                    html.Span(f"  {pct:.0f}/100", style={"color": "#8b949e", "float": "right"}),
+                ], style={"display": "flex", "justifyContent": "space-between"}),
+                html.Div(className="risk-bar-bg", children=[
+                    html.Div(className="risk-bar-fill",
+                             style={"width": f"{min(pct, 100):.0f}%"}),
+                ]),
+            ], style={"marginBottom": "10px"}))
+        return rows
 
-# ────────────────────────────────────────────────
-# Active alerts panel
-# ────────────────────────────────────────────────
-@app.callback(
-    Output("alerts-panel", "children"),
-    Input("interval", "n_intervals"),
-)
-def update_alerts(_):
-    alerts = _get(ALERTS_URL, [])
+    # ── Active alerts ─────────────────────────────────────────────────
+    @app.callback(
+        Output("alerts-panel",  "children"),
+        Output("advisory-panel","children"),
+        Input("tick", "n_intervals"),
+    )
+    def update_alerts(_):
+        data = _get("/api/alerts", [])
 
-    if not alerts:
-        return html.P("No active alerts.", className="panel-empty")
+        if not data:
+            no_alert = html.Div("No active alerts.", style={"color": "#8b949e", "fontSize": "12px"})
+            return no_alert, "No anomalies to report."
 
-    cards = []
-    for alert in alerts[:8]:  # show up to 8
-        sev   = alert.get("severity", "low")
-        color = SEVERITY_COLOR.get(sev, COLOR_SAFE)
-        viols = alert.get("violations", [])
-        viol_tags = [
-            html.Span(v["type"].replace("_", " "), className="viol-tag",
-                      style={"borderColor": color})
-            for v in viols
-        ]
-        cards.append(html.Div([
-            html.Div([
-                html.Span(alert["node_id"], className="alert-node"),
-                html.Span(sev.upper(), className="alert-severity",
-                          style={"color": color}),
-                html.Span(f"risk {alert.get('confidence', 0):.0f}%",
-                          className="alert-confidence"),
-            ], className="alert-header"),
-            html.Div(viol_tags, className="alert-violations"),
-            html.P(alert.get("timestamp", "")[:19].replace("T", " "),
-                   className="alert-ts"),
-        ], className="alert-card", style={"borderLeftColor": color}))
+        rows = []
+        last_advisory = ""
+        for alert in data:
+            sev  = alert.get("severity", "low")
+            vtags = [
+                html.Span(v.get("type", "unknown") if isinstance(v, dict) else str(v),
+                          className="vtag")
+                for v in alert.get("violations", [])
+            ]
+            rows.append(html.Div([
+                html.Div([
+                    html.Span(alert["node_id"], className="alert-node"),
+                    html.Span(f"  {sev.upper()}", className=f"alert-sev {sev}"),
+                    html.Span(f"  conf={alert['confidence']:.0f}",
+                              style={"color": "#8b949e", "fontSize": "11px"}),
+                ]),
+                html.Div(vtags, style={"marginTop": "4px"}),
+            ], className=f"alert-row {sev}"))
 
-    return cards
+            if alert.get("ai_analysis"):
+                last_advisory = alert["ai_analysis"]
 
+        return rows, last_advisory or "Waiting for advisory..."
 
-# ────────────────────────────────────────────────
-# AI advisory panel
-# ────────────────────────────────────────────────
-@app.callback(
-    Output("ai-advisory-panel", "children"),
-    Input("interval", "n_intervals"),
-)
-def update_advisory(_):
-    alerts = _get(ALERTS_URL, [])
+    # ── LSTM status badge ─────────────────────────────────────────────
+    @app.callback(
+        Output("lstm-badge-container", "children"),
+        Input("tick", "n_intervals"),
+    )
+    def update_lstm_badge(_):
+        status = _get("/api/lstm-status", {})
+        trained = status.get("trained", False)
+        samples = status.get("samples", 0)
 
-    if not alerts:
-        return html.P("Awaiting anomaly data…", className="panel-empty")
-
-    # Show the most recent AI analysis
-    latest = sorted(alerts, key=lambda a: a.get("timestamp", ""), reverse=True)
-    analysis = latest[0].get("ai_analysis", "No analysis available.")
-
-    return html.Div([
-        html.P(analysis, className="advisory-text"),
-    ])
+        if trained:
+            badge = html.Span("● LSTM Ready", className="lstm-badge ready")
+        else:
+            badge = html.Span(f"◌ LSTM Training ({samples} samples)",
+                              className="lstm-badge training")
+        return badge

@@ -1,14 +1,8 @@
-"""
-Launch the backend: ECU simulation + semantic detection engine + Flask API.
-Run from the project root:
-    python scripts/run_backend.py
-"""
-import subprocess
+"""Convenience launcher — run from project root: python scripts/run_backend.py"""
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).resolve().parent.parent
-subprocess.run(
-    [sys.executable, "-m", "backend.main"],
-    cwd=str(project_root),
-)
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+import backend.main   # noqa: F401  (executes the module)

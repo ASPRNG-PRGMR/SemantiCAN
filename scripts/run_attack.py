@@ -1,32 +1,23 @@
 """
-Manually trigger attack ECU injection against a running backend.
-
-Because the bus is in-process, this script is most useful when you want
-to start an attack without the 10-second auto-delay that main.py uses.
-
-Usage — run from the project root WHILE the backend is already running:
-    python scripts/run_attack.py
-
-Note: this spins up its own bus instance and publishes to it directly,
-which works if main.py's subscription is on a shared bus. For a true
-shared-bus attack trigger, use the sim.yaml `attack_start_after` setting
-or modify main.py to accept a signal.
-
-For a self-contained demo you can simply lower `attack_start_after` in
-backend/sim/sim.yaml to 0.
+Manually inject a one-shot attack payload for testing.
+Usage: python scripts/run_attack.py
+(Backend must be running first.)
 """
-import sys
+import sys, time
 from pathlib import Path
 
-# Ensure project root is on path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
-from backend.sim.bus import MessageBus
-from backend.sim.node_attack import start_attack_node
+from backend.sim.bus        import MessageBus
+from backend.sim.node_attack import ATTACK_ECUS
 
-if __name__ == "__main__":
-    print("[!] Launching standalone attack node…")
-    print("    NOTE: This uses a separate bus instance.")
-    print("    To inject into a live run, lower attack_start_after in sim.yaml.")
-    bus = MessageBus()
-    start_attack_node(bus)   # blocks forever
+bus = MessageBus()
+
+print("[*] Injecting one-shot attack payloads ...")
+for ecu in ATTACK_ECUS:
+    msg = {"node_id": ecu["node_id"], **ecu["payload"]()}
+    bus.publish("vehicle_state", msg)
+    print(f"  → {msg}")
+
+print("[*] Done.")

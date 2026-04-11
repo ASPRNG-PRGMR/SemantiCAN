@@ -1,68 +1,79 @@
 from dash import dcc, html
-import dash_bootstrap_components as dbc
 
-from frontend.config import REFRESH_INTERVAL_MS, DASHBOARD_TITLE
-
-
-def _kpi_card(card_id: str, label: str, icon: str) -> dbc.Card:
-    return dbc.Card(
-        dbc.CardBody([
-            html.Div(icon, className="kpi-icon"),
-            html.H2(id=card_id, children="—", className="kpi-value"),
-            html.P(label, className="kpi-label"),
-        ]),
-        className="kpi-card",
-    )
+from frontend.config import TITLE, SUBTITLE, REFRESH_INTERVAL
 
 
 def build_layout() -> html.Div:
     return html.Div([
 
-        # ── Poll interval ──
-        dcc.Interval(id="interval", interval=REFRESH_INTERVAL_MS, n_intervals=0),
+        # ── Live interval ──────────────────────────────────────────────
+        dcc.Interval(id="tick", interval=REFRESH_INTERVAL, n_intervals=0),
 
-        # ── Header ──
+        # ── Header ────────────────────────────────────────────────────
         html.Div([
-            html.H1(DASHBOARD_TITLE, className="dashboard-title"),
-            html.P("Live automotive ECU telemetry · Semantic anomaly detection · SOC view",
-                   className="dashboard-subtitle"),
-        ], className="dashboard-header"),
+            html.Div([
+                html.H1(TITLE),
+                html.P(SUBTITLE),
+            ]),
+            html.Div(id="lstm-badge-container", style={"marginLeft": "auto", "alignSelf": "center"}),
+        ], id="header"),
 
-        # ── KPI row ──
-        dbc.Row([
-            dbc.Col(_kpi_card("kpi-active-ecus",    "Active ECUs",      "🖥️"),  md=4),
-            dbc.Col(_kpi_card("kpi-anomalous-ecus", "Anomalous ECUs",   "⚠️"),  md=4),
-            dbc.Col(_kpi_card("kpi-last-anomaly",   "Last Anomaly",     "🕐"),  md=4),
-        ], className="kpi-row"),
+        # ── KPI strip ─────────────────────────────────────────────────
+        html.Div([
+            html.Div([
+                html.Div("Active ECUs",    className="kpi-label"),
+                html.Div(id="kpi-active",  className="kpi-value ok"),
+            ], className="kpi-card"),
+            html.Div([
+                html.Div("Anomalous ECUs", className="kpi-label"),
+                html.Div(id="kpi-anomalous", className="kpi-value"),
+            ], className="kpi-card"),
+            html.Div([
+                html.Div("Last Anomaly",  className="kpi-label"),
+                html.Div(id="kpi-last",   className="kpi-value", style={"fontSize": "14px"}),
+            ], className="kpi-card"),
+        ], style={"display": "flex", "gap": "12px", "padding": "16px 24px 0"}),
 
-        # ── Charts row ──
-        dbc.Row([
-            dbc.Col([
-                html.H4("Semantic Confidence History", className="chart-title"),
-                dcc.Graph(id="graph-history", config={"displayModeBar": False}),
-            ], md=8),
-            dbc.Col([
-                html.H4("Violation Rate", className="chart-title"),
-                dcc.Graph(id="graph-violation-rate", config={"displayModeBar": False}),
-            ], md=4),
-        ], className="chart-row"),
+        # ── Main body ─────────────────────────────────────────────────
+        html.Div([
 
-        # ── Bottom row: top ECUs + alerts + AI advisory ──
-        dbc.Row([
-            dbc.Col([
-                html.H4("Top Anomalous ECUs", className="panel-title"),
-                html.Div(id="top-ecus-panel", className="top-ecus-panel"),
-            ], md=3),
+            # Left column: charts + AI Advisory
+            html.Div([
+                html.Div([
+                    html.Div("Semantic Confidence History (per ECU)", className="panel-title"),
+                    dcc.Graph(id="chart-confidence", config={"displayModeBar": False},
+                              style={"height": "260px"}),
+                ], className="panel"),
 
-            dbc.Col([
-                html.H4("Active Semantic Alerts", className="panel-title"),
-                html.Div(id="alerts-panel", className="alerts-panel"),
-            ], md=5),
+                html.Div([
+                    html.Div("Violation Rate (10-second buckets)", className="panel-title"),
+                    dcc.Graph(id="chart-violation-rate", config={"displayModeBar": False},
+                              style={"height": "200px"}),
+                ], className="panel"),
 
-            dbc.Col([
-                html.H4("AI Vehicle Advisory", className="panel-title"),
-                html.Div(id="ai-advisory-panel", className="ai-advisory-panel"),
-            ], md=4),
-        ], className="bottom-row"),
+                # AI Advisory moved here — under the bar chart
+                html.Div([
+                    html.Div("AI Advisory (Local LSTM)", className="panel-title"),
+                    html.Div(id="advisory-panel",
+                             style={"color": "#8b949e", "fontSize": "12px",
+                                    "lineHeight": "1.7", "whiteSpace": "pre-wrap"}),
+                ], className="panel"),
+            ], style={"flex": "2", "minWidth": 0}),
 
-    ], className="dashboard-root")
+            # Right column: top ECUs + alerts only
+            html.Div([
+                html.Div([
+                    html.Div("Top Anomalous ECUs", className="panel-title"),
+                    html.Div(id="top-ecus"),
+                ], className="panel"),
+
+                html.Div([
+                    html.Div("Active Alerts", className="panel-title"),
+                    html.Div(id="alerts-panel",
+                             style={"maxHeight": "520px", "overflowY": "auto"}),
+                ], className="panel"),
+            ], style={"flex": "1", "minWidth": "320px"}),
+
+        ], style={"display": "flex", "gap": "16px", "padding": "16px 24px"}),
+
+    ])

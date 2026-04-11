@@ -1,15 +1,12 @@
-"""
-Launch the Dash frontend dashboard.
-The backend must be running first (scripts/run_backend.py).
-Run from the project root:
-    python scripts/run_dashboard.py
-"""
-import subprocess
+"""Convenience launcher — run from project root: python scripts/run_dashboard.py"""
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).resolve().parent.parent
-subprocess.run(
-    [sys.executable, "-m", "frontend.dashboard.app"],
-    cwd=str(project_root),
-)
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from frontend.dashboard.app import start_dashboard
+
+if __name__ == "__main__":
+    print("[*] Dashboard starting on http://127.0.0.1:8050")
+    start_dashboard(debug=False)

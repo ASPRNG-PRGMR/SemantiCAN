@@ -1,11 +1,9 @@
-# ECU registry with criticality weights (1–5 scale)
-
 ECU_CRITICALITY = {
     "ECU_ENGINE":      5,
     "ECU_BRAKE":       5,
     "ECU_STEERING":    5,
-    "ECU_SPEED":       5,   # attack node
-    "ECU_STEER":       5,   # attack node
+    "ECU_SPEED":       5,
+    "ECU_STEER":       5,
 
     "ECU_ADAS":        4,
     "ECU_BMS":         4,
@@ -17,5 +15,5 @@ ECU_CRITICALITY = {
 
 
 def get_ecu_weight(ecu_id: str) -> int:
-    """Returns criticality weight for an ECU. Defaults to 2 (medium) if unknown."""
+    """Returns criticality weight (1–5). Defaults to 2 for unknown ECUs."""
     return ECU_CRITICALITY.get(ecu_id, 2)

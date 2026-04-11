@@ -3,10 +3,9 @@ from backend.core.ecu_registry import get_ecu_weight
 
 def compute_vehicle_risk(active_alerts: list) -> float:
     """
-    Computes a weighted vehicle-wide risk score (0–100).
-
-    ECUs with higher criticality weights (e.g. brake, engine) contribute more
-    to the overall score than low-criticality ECUs (e.g. infotainment).
+    Weighted vehicle-wide risk score (0–100).
+    Safety-critical ECUs (brake, engine, steering) contribute more
+    than low-criticality ECUs (infotainment, body).
     """
     if not active_alerts:
         return 0.0
@@ -15,13 +14,12 @@ def compute_vehicle_risk(active_alerts: list) -> float:
     max_possible = 0.0
 
     for alert in active_alerts:
-        ecu = alert["node_id"]
+        ecu    = alert["node_id"]
         weight = get_ecu_weight(ecu)
-        weighted_sum += weight * (alert["confidence"] / 100)
+        weighted_sum += weight * (alert["confidence"] / 100.0)
         max_possible += weight
 
     if max_possible == 0:
         return 0.0
 
-    risk = (weighted_sum / max_possible) * 100
-    return round(min(risk, 100.0), 1)
+    return round(min((weighted_sum / max_possible) * 100.0, 100.0), 1)

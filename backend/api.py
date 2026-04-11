@@ -10,8 +10,8 @@ from backend.api_state import (
 app = Flask(__name__)
 
 
-def start_api():
-    app.run(port=5000, debug=False, use_reloader=False)
+def start_api(host: str = "127.0.0.1", port: int = 5000):
+    app.run(host=host, port=port, debug=False, use_reloader=False)
 
 
 @app.route("/api/summary")
@@ -38,3 +38,17 @@ def alerts():
 @app.route("/api/top-anomalous-ecus")
 def top_anomalous_ecus():
     return jsonify(get_top_anomalous_ecus(limit=3))
+
+
+@app.route("/api/lstm-status")
+def lstm_status():
+    """Exposes LSTM training state for the dashboard status indicator."""
+    try:
+        from backend.ai.advisor import _advisor
+        return jsonify({
+            "trained":     _advisor._trained,
+            "samples":     len(_advisor._buffer),
+            "train_steps": _advisor._step_count,
+        })
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
