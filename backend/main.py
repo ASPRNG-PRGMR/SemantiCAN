@@ -29,6 +29,7 @@ from backend.core.features    import FeatureExtractor
 from backend.core.checks      import semantic_checks
 from backend.core.scoring     import score_violations
 from backend.core.alerts      import generate_alert
+from backend.core.consistency import ConsistencyEngine
 
 from backend.ai.advisor       import ingest_message as lstm_ingest
 
@@ -43,6 +44,7 @@ ALERT_LOG_FILE = LOG_DIR / "alerts.log"
 bus           = MessageBus()
 subscription  = bus.subscribe("vehicle_state")
 extractor     = FeatureExtractor()
+consistency_engine = ConsistencyEngine()
 
 print("[*] Semantic Integrity Domain Controller started")
 
@@ -115,6 +117,31 @@ while True:
                         f"severity={alert['severity']} | "
                         f"confidence={alert['confidence']:.0f} | "
                         f"lstm={lstm_conf:.0f}"
+                    )
+
+            # 7. Cross-ECU Consistency Engine — runs on every message from a
+            #    correlated ECU regardless of whether the per-ECU checks
+            #    above fired, since the whole point is catching combinations
+            #    that pass every per-ECU rule individually (Phase3_Plan §3.7).
+            consistency_findings = consistency_engine.process(node_id, ts, message)
+            if consistency_findings:
+                cons_severity, cons_conf = score_violations(consistency_findings)
+                cons_key = "VEHICLE_CONSISTENCY::" + "+".join(
+                    sorted({f["type"] for f in consistency_findings})
+                )
+                cons_alert = generate_alert(
+                    node_id    = cons_key,
+                    violations = consistency_findings,
+                    severity   = cons_severity,
+                    confidence = cons_conf,
+                )
+                if cons_alert:
+                    with open(ALERT_LOG_FILE, "a") as f:
+                        f.write(json.dumps(cons_alert) + "\n")
+                    print(
+                        f"[CONSISTENCY ALERT] {cons_key} | "
+                        f"severity={cons_alert['severity']} | "
+                        f"confidence={cons_alert['confidence']:.0f}"
                     )
 
         time.sleep(0.05)
