@@ -1,158 +1,475 @@
-/* ── SemantiCAN SOC Dashboard — Dark Theme ── */
+/* ── SemantiCAN SOC Dashboard — Dark Neomorphic Theme ──
+   Spacing scale used everywhere: 4 / 8 / 12 / 16 / 24 / 32px.
+   Radius scale: 8px (chips/pills), 14px (panels), 18px (hero/modal).
+   Depth is communicated with soft dual shadows instead of hard 1px
+   borders wherever possible — that's the neomorphic part. Borders are
+   kept, but faint, purely for edge definition at small sizes. */
 
 :root {
   --bg:          #0d1117;
   --surface:     #161b22;
-  --surface2:    #21262d;
-  --border:      #30363d;
+  --surface2:    #1c222b;
+  --surface3:    #21262d;
+  --border:      #2a313c;
   --accent:      #58a6ff;
   --accent2:     #3fb950;
   --warn:        #d29922;
   --danger:      #f85149;
-  --text:        #c9d1d9;
-  --text-dim:    #8b949e;
+  --text:        #e6edf3;
+  --text-dim:    #9aa4b2;
   --font:        'JetBrains Mono', 'Fira Mono', monospace;
+
+  --shadow-out: 8px 8px 18px rgba(0,0,0,0.55), -6px -6px 14px rgba(255,255,255,0.02);
+  --shadow-in:  inset 4px 4px 8px rgba(0,0,0,0.45), inset -3px -3px 6px rgba(255,255,255,0.015);
 }
 
-body, .dash-debug-menu {
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
   background-color: var(--bg) !important;
   color: var(--text) !important;
   font-family: var(--font) !important;
-  font-size: 13px;
+  font-size: 14px;
+}
+
+#dashboard-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
 
 /* ── Header ── */
 #header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 14px 24px;
+  padding: 16px 28px;
   display: flex;
   align-items: center;
   gap: 16px;
+  flex: 0 0 auto;
 }
 
 #header h1 {
   color: var(--accent);
-  font-size: 18px;
+  font-size: 20px;
   margin: 0;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
 }
 
 #header p {
   color: var(--text-dim);
-  font-size: 11px;
-  margin: 0;
+  font-size: 12px;
+  margin: 2px 0 0;
 }
 
-/* ── KPI cards ── */
-.kpi-card {
-  background: var(--surface);
+/* ── Hero (AI Advisory) ── */
+.hero {
+  flex: 0 0 auto;
+  margin: 16px 28px 0;
+  padding: 20px 26px;
+  border-radius: 18px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 16px 20px;
-  flex: 1;
+  border-left: 5px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-out);
+  transition: border-color 0.3s ease, background 0.3s ease;
 }
 
-.kpi-label {
-  font-size: 10px;
+.hero--critical { border-left-color: var(--danger); background: linear-gradient(90deg, #2a1315, var(--surface) 40%); }
+.hero--high      { border-left-color: var(--warn);   background: linear-gradient(90deg, #2a2213, var(--surface) 40%); }
+.hero--medium    { border-left-color: var(--accent);  background: linear-gradient(90deg, #13202a, var(--surface) 40%); }
+.hero--low       { border-left-color: var(--accent2); background: var(--surface); }
+.hero--ok        { border-left-color: var(--accent2); background: var(--surface); }
+
+.hero-top-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.hero-risk-block { display: flex; align-items: baseline; gap: 14px; }
+
+.hero-risk-number {
+  font-size: 46px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+}
+
+.hero--critical .hero-risk-number { color: var(--danger); }
+.hero--high      .hero-risk-number { color: var(--warn);   }
+.hero--medium    .hero-risk-number { color: var(--accent);  }
+.hero--low       .hero-risk-number,
+.hero--ok        .hero-risk-number { color: var(--accent2); }
+
+.hero-risk-tag {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: inherit;
+}
+.hero-risk-suffix {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 28px;
+}
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 12px;
+}
+.hero-stat span:first-child {
   color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+  font-size: 11px;
+}
+.hero-stat span:last-child {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 700;
 }
 
-.kpi-value {
-  font-size: 28px;
-  font-weight: bold;
+.hero-chips { margin-top: 18px; }
+.chip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+.chip-row-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text-dim); margin-right: 4px; min-width: 74px;
+  flex: 0 0 auto;
+}
+.chip-row-empty { color: var(--text-dim); font-size: 13px; margin-top: 10px; }
+
+/* ── Chips ──
+   ECU chips: outline style (identity, not alert) — dark bg, bright text.
+   Violation chips: SOLID danger background + near-black text. This is the
+   direct fix for the "red text on red background" issue — same-hue
+   background+text at different lightness reads as low contrast; solid
+   background + near-black text is unambiguous at any size. */
+.chip {
+  display: inline-block;
+  flex: 0 0 auto;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.chip-ecu {
   color: var(--accent);
+  background: var(--surface3);
+  border: 1px solid rgba(88,166,255,0.35);
+}
+.chip-violation {
+  color: #1a0505;
+  background: var(--danger);
+  border: 1px solid rgba(0,0,0,0.15);
+}
+.chip-more {
+  color: var(--text-dim);
+  background: var(--surface3);
+  border: 1px dashed var(--border);
+}
+.chip-button {
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.chip-button:hover {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+.chip-modal { margin: 4px; }
+
+.hero-narrative {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.7;
+  max-height: 64px;
+  overflow-y: auto;
 }
 
-.kpi-value.warn  { color: var(--warn);   }
-.kpi-value.danger { color: var(--danger); }
-.kpi-value.ok    { color: var(--accent2); }
+/* ── Body: two columns ──
+   Right column narrowed (was 1:2, now roughly 2:5) — alert rows are
+   compact left-aligned clusters now, not spread across the full column
+   width, so they don't need as much horizontal room to avoid looking
+   sparse. */
+#body-grid {
+  display: flex;
+  gap: 18px;
+  padding: 18px 28px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#body-left {
+  flex: 5;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 18px;
+}
+
+#body-right {
+  flex: 2;
+  min-width: 300px;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 18px;
+}
+
+.panel-row {
+  display: flex;
+  gap: 18px;
+  flex: 0 0 auto;
+}
+.panel-row .panel { flex: 1; margin-bottom: 0; }
+
+/* This row (Top Anomalous ECUs + Detection Method) grows to fill
+   whatever vertical space is left in the left column, instead of sizing
+   to its own content and leaving blank space below it — that was the
+   "bottom space not being utilized" gap. */
+.panel-row-fill {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.panel-fill {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 
 /* ── Panels ── */
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 16px;
-  margin-bottom: 16px;
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-out);
+}
+
+.panel-grow {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin-bottom: 0;
+}
+
+.panel-compact { margin-bottom: 0; }
+
+.panel-chart {
+  flex: 0 0 auto;
+  margin-bottom: 0;
 }
 
 .panel-title {
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text-dim);
   border-bottom: 1px solid var(--border);
-  padding-bottom: 8px;
-  margin-bottom: 12px;
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+  flex: 0 0 auto;
+}
+.panel-title-note {
+  color: var(--text-dim);
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
 }
 
-/* ── Alert rows ── */
+.empty-note { color: var(--text-dim); font-size: 13px; }
+
+.alerts-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ── Top anomalous ECUs list ── */
+.top-ecus-list { flex: 1; overflow-y: auto; }
+.top-ecu-item { margin-bottom: 14px; }
+.top-ecu-item:last-child { margin-bottom: 0; }
+.top-ecu-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.top-ecu-name { color: var(--accent); font-weight: 700; font-size: 13px; }
+.top-ecu-value { color: var(--text-dim); font-size: 13px; }
+
+/* ── Alert rows — compact left-aligned cluster, no far-right spread ── */
 .alert-row {
   border-left: 3px solid var(--border);
-  padding: 8px 12px;
-  margin-bottom: 8px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
   background: var(--surface2);
-  border-radius: 0 4px 4px 0;
-  font-size: 12px;
+  border-radius: 0 10px 10px 0;
+  box-shadow: var(--shadow-in);
+  font-size: 13px;
 }
+.alert-row:last-child { margin-bottom: 0; }
 
 .alert-row.critical { border-color: var(--danger); }
 .alert-row.high     { border-color: var(--warn);   }
 .alert-row.medium   { border-color: var(--accent);  }
 .alert-row.low      { border-color: var(--accent2); }
 
-.alert-node  { color: var(--accent); font-weight: bold; }
-.alert-sev   { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-.alert-sev.critical { color: var(--danger); }
-.alert-sev.high     { color: var(--warn);   }
-.alert-sev.medium   { color: var(--accent);  }
-.alert-analysis { color: var(--text-dim); margin-top: 4px; font-size: 11px; line-height: 1.5; }
+.alert-row-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.alert-node  { color: var(--accent); font-weight: 700; font-size: 13px; }
+.alert-conf  { color: var(--text-dim); font-size: 12px; }
+.alert-row-tags { margin-top: 8px; }
 
-/* ── Violation tags ── */
+/* ── Pills (severity / detector attribution) — solid bg + near-black text
+   for anything alert-semantic, matching the chip fix above. ── */
+.pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+.pill--critical { background: var(--danger); color: #1a0505; }
+.pill--high     { background: var(--warn);   color: #1a1300; }
+.pill--medium   { background: var(--accent);  color: #04101c; }
+.pill--low      { background: var(--accent2); color: #04140a; }
+.pill--detector {
+  background: var(--surface3);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  text-transform: none;
+  font-weight: 600;
+}
+
+/* ── Violation tags (inside alert rows — smaller, secondary to the pills) ── */
 .vtag {
   display: inline-block;
-  background: var(--surface);
+  background: var(--surface3);
   border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 1px 6px;
-  font-size: 10px;
-  margin: 2px 2px 0 0;
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-size: 11px;
+  margin: 2px 4px 0 0;
   color: var(--text-dim);
 }
 
 /* ── LSTM status badge ── */
 .lstm-badge {
   display: inline-block;
-  padding: 2px 10px;
+  padding: 4px 12px;
   border-radius: 12px;
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  font-weight: bold;
+  font-weight: 700;
 }
-
 .lstm-badge.training { background: #2d2a1a; color: var(--warn);   border: 1px solid var(--warn);   }
 .lstm-badge.ready    { background: #1a2d1e; color: var(--accent2); border: 1px solid var(--accent2); }
 
 /* ── Risk bars ── */
 .risk-bar-bg {
-  background: var(--surface2);
-  border-radius: 3px;
+  background: var(--surface3);
+  border-radius: 4px;
   height: 8px;
-  margin-top: 4px;
+  box-shadow: var(--shadow-in);
 }
-
 .risk-bar-fill {
   height: 8px;
-  border-radius: 3px;
+  border-radius: 4px;
   background: linear-gradient(90deg, var(--accent2), var(--warn), var(--danger));
   transition: width 0.4s ease;
 }
 
-/* ── Plotly charts — force dark background ── */
-.js-plotly-plot .plotly .bg { fill: var(--surface) !important; }
+/* ── ECU modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-overlay.hidden { display: none; }
+.modal-overlay.visible { display: flex; }
+
+.modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-out);
+  width: min(720px, 90vw);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 0 0 auto;
+}
+.modal-close {
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: var(--font);
+}
+.modal-close:hover { color: var(--text); background: var(--danger); }
+.modal-body {
+  padding: 18px 22px;
+  overflow-y: auto;
+}
+.modal-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── Plotly charts ── */
 .modebar { display: none !important; }

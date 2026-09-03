@@ -101,6 +101,8 @@ def run_pipeline(run_dir: Path, speed: float):
                 violations=violations,
                 severity=fused_severity,
                 confidence=fused_conf,
+                rule_conf=rule_conf,
+                lstm_conf=lstm_conf,
             )
 
         per_message_results.append({

@@ -106,6 +106,8 @@ while True:
                     violations = violations,
                     severity   = fused_severity,
                     confidence = fused_conf,
+                    rule_conf  = rule_conf,
+                    lstm_conf  = lstm_conf,
                 )
 
                 if alert:
@@ -134,6 +136,8 @@ while True:
                     violations = consistency_findings,
                     severity   = cons_severity,
                     confidence = cons_conf,
+                    rule_conf  = cons_conf,
+                    lstm_conf  = 0.0,
                 )
                 if cons_alert:
                     with open(ALERT_LOG_FILE, "a") as f:

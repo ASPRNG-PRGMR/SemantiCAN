@@ -132,8 +132,23 @@ class LSTMAdvisor:
         """
         risk    = vehicle_summary.get("risk_score", 0)
         anomalies = vehicle_summary.get("anomalies", [])
-        ecu_list  = ", ".join(a["ecu"] for a in anomalies) if anomalies else "unknown"
         trained_str = "LSTM-scored" if self._trained else "pre-training baseline"
+
+        # The dashboard already shows every anomalous ECU as a chip in the
+        # hero panel (backend/main.py -> ACTIVE_ALERTS -> frontend chips).
+        # Repeating all of them by name here just makes the narrative
+        # unreadable once more than a handful of ECUs are anomalous — this
+        # sentence should summarize, not enumerate. Cap it and note the
+        # overflow count instead.
+        ECU_LIST_DISPLAY_LIMIT = 6
+        ecu_names = [a["ecu"] for a in anomalies]
+        if not ecu_names:
+            ecu_list = "unknown"
+        elif len(ecu_names) <= ECU_LIST_DISPLAY_LIMIT:
+            ecu_list = ", ".join(ecu_names)
+        else:
+            shown = ecu_names[:ECU_LIST_DISPLAY_LIMIT]
+            ecu_list = f"{', '.join(shown)}, and {len(ecu_names) - ECU_LIST_DISPLAY_LIMIT} more"
 
         if risk >= 80:
             level  = "CRITICAL"

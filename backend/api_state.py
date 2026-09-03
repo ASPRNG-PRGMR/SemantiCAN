@@ -64,10 +64,22 @@ def get_summary() -> dict:
         if semantic_history else None
     )
 
+    # vehicle_risk was previously only derivable by parsing the LSTM's free
+    # text narrative (e.g. "Vehicle risk 85.7/100..."). Computed directly
+    # here the same way backend/core/alerts.py does it internally, so the
+    # dashboard hero can show a real number instead of regexing a sentence.
+    try:
+        from backend.core.alerts import get_active_alerts
+        from backend.core.vehicle_risk import compute_vehicle_risk
+        vehicle_risk = compute_vehicle_risk(get_active_alerts())
+    except Exception:
+        vehicle_risk = 0.0
+
     return {
         "active_ecus":    len(ecu_last_seen),
         "anomalous_ecus": anomalous_ecus,
         "last_anomaly":   last_anomaly,
+        "vehicle_risk":   vehicle_risk,
     }
 
 

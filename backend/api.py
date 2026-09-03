@@ -40,6 +40,12 @@ def top_anomalous_ecus():
     return jsonify(get_top_anomalous_ecus(limit=3))
 
 
+@app.route("/api/detector-breakdown")
+def detector_breakdown():
+    from backend.core.alerts import get_detector_breakdown
+    return jsonify(get_detector_breakdown())
+
+
 @app.route("/api/lstm-status")
 def lstm_status():
     """Exposes LSTM training state for the dashboard status indicator."""
