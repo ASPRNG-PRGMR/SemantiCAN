@@ -120,12 +120,27 @@ An in-memory rolling store (60-second window, see `api_state.py`) plus a persist
 **Why it exists:** supports both the live dashboard (recent window) and after-the-fact review (persisted log) - see `Threat_Model.md` for why auditability is a stated security goal.
 
 ### 4.7 Flask Backend API (`backend/api.py`, `backend/api_state.py`)
-Exposes six read-only JSON endpoints (`/api/summary`, `/api/alerts`, `/api/semantic-history`, `/api/violation-rate`, `/api/top-anomalous-ecus`, `/api/lstm-status`). Currently unauthenticated - see `Threat_Model.md` §7 for the associated trust-boundary gap.
+Exposes seven read-only JSON endpoints (`/api/summary`, `/api/alerts`, `/api/semantic-history`, `/api/violation-rate`, `/api/top-anomalous-ecus`, `/api/detector-breakdown`, `/api/lstm-status`). Currently unauthenticated - see `Threat_Model.md` §7 for the associated trust-boundary gap.
+
+`/api/top-anomalous-ecus` is no longer consumed by the console. It sorts by `(risk, last_seen)` and caps at three, so once a crowd of ECUs sits at the ceiling together the "top three" is whichever three reported most recently. The console derives that panel from `/api/semantic-history` instead, which lets it detect the tie and say so. The endpoint is left in place for API consumers.
 
 **Why it exists:** decouples the detection/simulation process from the presentation layer, and models how a real vehicle security operations backend would expose state to a SOC tool.
 
-### 4.8 Dash SOC Dashboard (`frontend/dashboard/`)
-Polls the backend API and renders: a KPI strip, an LSTM training/ready badge, per-ECU confidence history, a violation-rate bar chart, the AI Advisory narrative, top anomalous ECUs, and active alert cards.
+### 4.8 Dash SOC Console (`frontend/dashboard/`)
+Polls the backend API every 2s and renders three views behind a switcher in the command bar:
+
+- **Live** - per-ECU confidence history (the ~117 normal ECUs collapsed into a min/max envelope so the handful that matter stay visible), a violation-rate bar chart, detector attribution, and the alert stream with severity filter and sort.
+- **Detection** - the physics rules and cross-ECU consistency checks with their thresholds, each mapped to its TARA entry and security goal, plus the open coverage gaps. Static, built from `frontend/dashboard/reference.py`, which mirrors `checks.py`, `consistency.py`, `Detection.md` and `TARA.md`.
+- **Evaluation** - the measured detection figures from `Evaluation.md` §4, each stamped with the script and run that produced them.
+
+Above all three sits the advisory deck: the weighted vehicle risk gauge, the highest-scoring ECUs, and the advisory narrative for the newest alert.
+
+Two behaviours are worth noting at the architecture level because they are consequences of the backend contract rather than styling choices:
+
+- **A failed fetch is not an empty result.** `_get` distinguishes "the API said zero" from "the API did not answer". When the backend is unreachable the console says so and holds the last known alert list, rather than rendering an all-clear with a risk of 0.0.
+- **`ai_analysis` is frozen at alert-creation time,** so the console always stamps it with its own alert's timestamp and scoring mode (`LSTM-scored` vs `pre-training baseline`) - a stale narrative must not read as a live assessment.
+
+`frontend/DESIGN_NOTES.md` records the design decisions and the constraints in this API that shaped them.
 
 **Why it exists:** demonstrates how the detection signal would actually be consumed by a human analyst, not just logged.
 

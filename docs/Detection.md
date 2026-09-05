@@ -1,6 +1,6 @@
 # Detection - SemantiCAN
 
-**Status:** Draft v0.1 - describes current detection logic. ISO 21434-style rule mapping (Rule → Protects → Threat → Security Goal) will be added here in Phase 2 Step 3.
+**Status:** Draft v0.2 - describes current detection logic. The ISO 21434-style rule mapping (Rule → Protects → Threat → Security Goal) is in §2.1 below, and is also rendered live in the dashboard's Detection tab (`frontend/dashboard/reference.py`).
 
 ## 1. Detection Philosophy
 
@@ -20,7 +20,9 @@ Two complementary methods answer that question:
 | `velocity_without_acceleration` | Velocity > 140 km/h with reported accel < 1 m/s² | HIGH |
 | `impossible_acceleration` | Absolute acceleration > 7 m/s² | CRITICAL |
 | `unsafe_steering_angle` | Steering > 30° at speed > 80 km/h | MEDIUM |
-| `acceleration_velocity_mismatch` | Reported accel vs. derived accel (Δv/Δt) differ by > 2 m/s² | HIGH |
+| `acceleration_velocity_mismatch` | Reported accel vs. derived accel (Δv/Δt) differ by > 4 m/s², and only when \|reported accel\| > 2 m/s² | HIGH |
+
+The 4 m/s² figure is the mismatch tolerance and the 2 m/s² figure is the floor below which the rule does not apply at all; an earlier draft of this table collapsed the two into a single `> 2 m/s²` trigger, which did not match `checks.py`. The values above are the ones the code applies.
 
 Each rule is intentionally simple and explainable: a violation can be pointed to and justified without reference to a model's internal state. This directly supports the Explainability security goal in `Threat_Model.md`.
 

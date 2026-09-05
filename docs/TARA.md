@@ -1,6 +1,6 @@
 # TARA - Threat Analysis and Risk Assessment - SemantiCAN
 
-**Status:** Draft v0.1 - formalizes the threats identified in `Threat_Model.md` into ISO 21434-style TARA entries. This is the roadmap's highest-priority addition (Phase 2 Step 2).
+**Status:** Draft v0.2 - formalizes the threats identified in `Threat_Model.md` into ISO 21434-style TARA entries. This is the roadmap's highest-priority addition (Phase 2 Step 2). TARA-04's residual risk is now measured rather than assumed (see `Evaluation.md` §4.5); the entries are also surfaced in the dashboard's Detection tab.
 
 ## 1. Purpose
 
@@ -52,7 +52,7 @@ Each entry is numbered (`TARA-01`, `TARA-02`, ...) so it can be referenced from 
 | **Attack Path** | Attacker with knowledge of the fixed rule thresholds (e.g., stays under 7 m/s², under 30° at speed) deliberately crafts values just inside the "safe" boundary |
 | **Security Goal** | Resilience to single-vector evasion (Security Goal 3) |
 | **Mitigation** | LSTM anomaly scoring - designed specifically to catch distributional drift that fixed thresholds miss. Test scenario now implemented: `backend/sim/node_subthreshold.py` (ECU_GHOST) publishes a perfectly smooth sinusoidal velocity/steering pattern, individually within every rule's threshold by a wide margin (see the file's own margin table), with reported acceleration matching the analytic derivative of velocity exactly — structurally invisible to `checks.py` and to the Consistency Engine (ECU_GHOST is deliberately outside `CORRELATED_ECU_IDS`), by construction rather than by luck. `scripts/evaluate_subthreshold.py` runs it against the real pipeline and confirms the structural half (0 rule fires, 0 consistency fires) in any environment. |
-| **Residual Risk** | Depends entirely on LSTM training quality and baseline cleanliness (see TARA-06). **The structural claim — rules and Consistency Engine cannot see this attack — is now verified, not assumed.** The LSTM-side claim is not yet verified: this sandbox has no `torch` installed, so `backend/ai/advisor.py`'s documented no-fallback behavior means every confidence score is 0.0 here regardless of the actual signal. `scripts/evaluate_subthreshold.py` needs to be re-run on a machine with torch to get the number that actually answers TARA-04. Also worth flagging while reading `advisor.py`: its training buffer is a flat list filled by whichever ECU happens to publish next, so consecutive *training* windows can mix multiple different ECUs' interleaved messages rather than one ECU's real sequence — inference-time windows are correctly per-ECU (`_ecu_windows`), but whether training on interleaved data taught the model genuine per-ECU temporal structure is itself an open question the evaluation run will partially answer. |
+| **Residual Risk** | **High, and now measured rather than assumed.** The structural claim is verified: rules and the Consistency Engine cannot see this attack, by construction. The LSTM-side claim has now been tested with `torch 2.14.0` installed and the model trained (`scripts/evaluate_subthreshold.py --duration 60 --ghost-delay 10`, see `Evaluation.md` §4.5): `ECU_GHOST` scored mean 53.2 / max 100.0 against a normal control ECU's mean 48.1 / max 100.0. Both saturate; a 5-point gap in means is not a detection. **The detector intended to close this gap does not currently close it.** Two things worth testing before concluding the approach itself is wrong, both visible in `backend/ai/advisor.py`: its training buffer is a flat list filled by whichever ECU publishes next, so training windows interleave ECUs even though inference windows are correctly per-ECU (`_ecu_windows`); and one shared model across 120 ECUs may simply lack the capacity to represent per-ECU normality. |
 
 ### TARA-05 - Rule Threshold Blind Spots
 
@@ -116,7 +116,7 @@ Each entry is numbered (`TARA-01`, `TARA-02`, ...) so it can be referenced from 
 | TARA-01 | Spoofed Speed ECU | Telemetry integrity | Yes - rules |
 | TARA-02 | Spoofed Brake ECU | Telemetry integrity | Yes - rules + LSTM |
 | TARA-03 | Spoofed Steering ECU | Hazardous steering prevention | Yes - rules |
-| TARA-04 | Slow semantic drift (sub-threshold) | Resilience to evasion | Partial - LSTM, unquantified |
+| TARA-04 | Slow semantic drift (sub-threshold) | Resilience to evasion | **No** - LSTM measured and does not separate it, see `Evaluation.md` §4.5 |
 | TARA-05 | Rule threshold blind spots | Telemetry integrity | Partial - Cross-ECU Correlation implemented, see `Detection.md` §8 |
 | TARA-06 | Poisoned LSTM baseline | Detection pipeline integrity | No |
 | TARA-07 | Unauthenticated backend API | Auditability / operator trust | No |
@@ -126,5 +126,5 @@ Each entry is numbered (`TARA-01`, `TARA-02`, ...) so it can be referenced from 
 ## 4. Next Steps
 
 - Feed TARA-01 through TARA-03 into `Detection.md`'s Rule → Threat mapping table (replacing the current TBD placeholders) - done as part of this update.
-- Quantify TARA-04's residual risk once `Evaluation.md` has real Rule Hits vs. LSTM Hits data.
+- ~~Quantify TARA-04's residual risk once `Evaluation.md` has real Rule Hits vs. LSTM Hits data.~~ Done 2026-09-05: measured, and the answer is that the LSTM does not currently detect it. The open question moves from *"does the LSTM cover this?"* to *"is the LSTM's per-ECU training the reason it doesn't?"*
 - TARA-05 and TARA-09 now have a design-stage mitigation plan in `Phase3_Plan.md`. TARA-06, TARA-07, and TARA-08 remain unaddressed and are candidates for a future phase.

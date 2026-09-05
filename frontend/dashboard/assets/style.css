@@ -1,475 +1,1207 @@
-/* ── SemantiCAN SOC Dashboard — Dark Neomorphic Theme ──
-   Spacing scale used everywhere: 4 / 8 / 12 / 16 / 24 / 32px.
-   Radius scale: 8px (chips/pills), 14px (panels), 18px (hero/modal).
-   Depth is communicated with soft dual shadows instead of hard 1px
-   borders wherever possible — that's the neomorphic part. Borders are
-   kept, but faint, purely for edge definition at small sizes. */
+/* ==========================================================================
+   SemantiCAN SOC console
+   Soft-depth (neomorphic) surfaces, high-contrast data.
+
+   Rule that governs everything below:
+     depth carries the chrome, contrast carries the data.
+   Containers are embossed or debossed from the base plane. Anything an
+   operator has to READ sits at full contrast on top of that plane. There
+   is no soft-grey-on-soft-grey text anywhere in this file.
+   ========================================================================== */
 
 :root {
-  --bg:          #0d1117;
-  --surface:     #161b22;
-  --surface2:    #1c222b;
-  --surface3:    #21262d;
-  --border:      #2a313c;
-  --accent:      #58a6ff;
-  --accent2:     #3fb950;
-  --warn:        #d29922;
-  --danger:      #f85149;
-  --text:        #e6edf3;
-  --text-dim:    #9aa4b2;
-  --font:        'JetBrains Mono', 'Fira Mono', monospace;
+  /* ── Light, the default ────────────────────────────────────────────
+     Soft-depth is native to a light ground: neomorphism was born on light
+     greys, and the two lights below are a real white highlight and a real
+     grey shade rather than the approximations a dark plane forces.
 
-  --shadow-out: 8px 8px 18px rgba(0,0,0,0.55), -6px -6px 14px rgba(255,255,255,0.02);
-  --shadow-in:  inset 4px 4px 8px rgba(0,0,0,0.45), inset -3px -3px 6px rgba(255,255,255,0.015);
+     The rule from the dark theme is unchanged and is what keeps this
+     usable in a SOC: depth carries the chrome, contrast carries the data.
+     Every severity and detector hue below is darkened relative to its dark
+     counterpart so it still holds contrast against a light surface — the
+     same hue at the same lightness would wash out. */
+  --plane:        #e9edf3;
+  --plane-lo:     #dfe4ed;
+  --surface:      #eef1f7;
+  --surface-hi:   #f7f9fc;
+
+  --emboss-light: rgba(255, 255, 255, 0.95);
+  --emboss-dark:  rgba(142, 155, 178, 0.40);
+
+  --ink:      #161b26;
+  --ink-mid:  #4a5466;
+  --ink-low:  #7a8497;
+
+  --sev-nominal:  #6b7488;
+  --sev-low:      #0f7a6c;
+  --sev-medium:   #9a6a0d;
+  --sev-high:     #b8531c;
+  --sev-critical: #c22a30;
+
+  --det-rule:    #2a66b8;
+  --det-lstm:    #6f47bd;
+  --det-both:    #0f7a6c;
+  --det-unknown: #6b7488;
+
+  --accent-cross:     #7b4fc0;
+  --accent-violation: #8f6410;
+
+  --icon-sun:  #c9950c;
+  --icon-moon: #7b4fc0;
+
+  --gauge-track:        rgba(150, 162, 184, 0.38);
+  --scrim:              rgba(70, 80, 100, 0.34);
+  --rule:               #d5dbe6;
+  --scroll-thumb:       #c3cbd9;
+  --scroll-thumb-hover: #aeb8ca;
+  --drawer-shadow:      -22px 0 60px rgba(90, 100, 120, 0.30);
+
+  --tint-low:      radial-gradient(120% 160% at 0% 0%, rgba(15,122,108,0.10), transparent 62%);
+  --tint-medium:   radial-gradient(120% 160% at 0% 0%, rgba(154,106,13,0.12), transparent 62%);
+  --tint-high:     radial-gradient(120% 160% at 0% 0%, rgba(184,83,28,0.13), transparent 62%);
+  --tint-critical: radial-gradient(120% 160% at 0% 0%, rgba(194,42,48,0.13), transparent 62%);
+  --tint-offline:  repeating-linear-gradient(135deg, rgba(122,132,151,0.10) 0 12px, transparent 12px 24px);
+
+  --radius:    16px;
+  --radius-sm: 10px;
+  --radius-xs: 7px;
+
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+  /* Mono is reserved for NUMERIC readouts only, never for labels. Tabular
+     figures stop digits shifting sideways as values tick every 2s. */
+  --font-num: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
+              "Liberation Mono", monospace;
+
+  --dur-quick: 180ms;
+  --dur-base:  420ms;
+  --dur-slow:  760ms;
+  --ease: cubic-bezier(0.22, 0.68, 0.32, 1);
 }
 
-html, body {
+/* ── Dark ──────────────────────────────────────────────────────────────
+   Opt-in, via the command bar toggle. Only the colour tokens are
+   redefined; every shadow, radius, font and duration above is shared, so
+   the two themes are the same design at two luminances rather than two
+   designs. */
+[data-theme="dark"] {
+  /* Base plane. Deliberately not near-black: neomorphism needs luminance
+     headroom in BOTH directions to emboss from. #0d1117 has none. */
+  --plane:        #141821;
+  --plane-lo:     #10141c;
+  --surface:      #181d28;
+  --surface-hi:   #1e2431;
+
+  /* The two lights. Every raised/inset shape is built from this pair. */
+  --emboss-light: rgba(255, 255, 255, 0.055);
+  --emboss-dark:  rgba(0, 0, 0, 0.58);
+
+  /* Data contrast. */
+  --ink:      #e9edf5;
+  --ink-mid:  #a3adc0;
+  --ink-low:  #737d92;
+
+  /* Severity ramp. Sequential: this scale means "how bad".
+     Nothing else in the UI is allowed to use these five. */
+  --sev-nominal:  #5f6a80;
+  --sev-low:      #2fb3a0;
+  --sev-medium:   #d99b2b;
+  --sev-high:     #e2733c;
+  --sev-critical: #e5484d;
+
+  /* Detector attribution. Categorical: this scale means "which engine".
+     Kept off the severity hues on purpose so a colour never means two
+     things at once. */
+  --det-rule:    #4a8fe0;
+  --det-lstm:    #9d7ce8;
+  --det-both:    #2fb3a0;
+  --det-unknown: #6b7488;
+
+  --accent-cross:     #c9a3f0;
+  --accent-violation: #e8b877;
+
+  --icon-sun:  #f2c94c;
+  --icon-moon: #a98cf0;
+
+  --gauge-track:        rgba(0, 0, 0, 0.42);
+  --scrim:              rgba(8, 10, 15, 0.62);
+  --rule:               #202634;
+  --scroll-thumb:       #262d3b;
+  --scroll-thumb-hover: #313a4c;
+  --drawer-shadow:      -22px 0 60px rgba(0, 0, 0, 0.62);
+
+  --tint-low:      radial-gradient(120% 160% at 0% 0%, rgba(47,179,160,0.10), transparent 62%);
+  --tint-medium:   radial-gradient(120% 160% at 0% 0%, rgba(217,155,43,0.13), transparent 62%);
+  --tint-high:     radial-gradient(120% 160% at 0% 0%, rgba(226,115,60,0.15), transparent 62%);
+  --tint-critical: radial-gradient(120% 160% at 0% 0%, rgba(229,72,77,0.17), transparent 62%);
+  --tint-offline:  repeating-linear-gradient(135deg, rgba(115,125,146,0.07) 0 12px, transparent 12px 24px);
+}
+
+/* Calm mode + OS reduced-motion both collapse motion to near-instant.
+   Long-shift affordance: the layout never changes, only the transit time. */
+[data-calm="on"] {
+  --dur-quick: 1ms;
+  --dur-base:  1ms;
+  --dur-slow:  1ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-quick: 1ms; --dur-base: 1ms; --dur-slow: 1ms; }
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+}
+
+* { box-sizing: border-box; }
+
+html, body, #react-entry-point, #_dash-app-content {
   height: 100%;
   margin: 0;
 }
 
 body {
-  background-color: var(--bg) !important;
-  color: var(--text) !important;
-  font-family: var(--font) !important;
-  font-size: 14px;
-}
-
-#dashboard-root {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-
-/* ── Header ── */
-#header {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 16px 28px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 0 0 auto;
-}
-
-#header h1 {
-  color: var(--accent);
-  font-size: 20px;
-  margin: 0;
-  letter-spacing: 0.4px;
-}
-
-#header p {
-  color: var(--text-dim);
-  font-size: 12px;
-  margin: 2px 0 0;
-}
-
-/* ── Hero (AI Advisory) ── */
-.hero {
-  flex: 0 0 auto;
-  margin: 16px 28px 0;
-  padding: 20px 26px;
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  border-left: 5px solid var(--border);
-  background: var(--surface);
-  box-shadow: var(--shadow-out);
-  transition: border-color 0.3s ease, background 0.3s ease;
-}
-
-.hero--critical { border-left-color: var(--danger); background: linear-gradient(90deg, #2a1315, var(--surface) 40%); }
-.hero--high      { border-left-color: var(--warn);   background: linear-gradient(90deg, #2a2213, var(--surface) 40%); }
-.hero--medium    { border-left-color: var(--accent);  background: linear-gradient(90deg, #13202a, var(--surface) 40%); }
-.hero--low       { border-left-color: var(--accent2); background: var(--surface); }
-.hero--ok        { border-left-color: var(--accent2); background: var(--surface); }
-
-.hero-top-row {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.hero-risk-block { display: flex; align-items: baseline; gap: 14px; }
-
-.hero-risk-number {
-  font-size: 46px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--text);
-}
-
-.hero--critical .hero-risk-number { color: var(--danger); }
-.hero--high      .hero-risk-number { color: var(--warn);   }
-.hero--medium    .hero-risk-number { color: var(--accent);  }
-.hero--low       .hero-risk-number,
-.hero--ok        .hero-risk-number { color: var(--accent2); }
-
-.hero-risk-tag {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: inherit;
-}
-.hero-risk-suffix {
-  font-size: 12px;
-  color: var(--text-dim);
-  letter-spacing: 0.5px;
-}
-
-.hero-stats {
-  display: flex;
-  gap: 28px;
-}
-.hero-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  font-size: 12px;
-}
-.hero-stat span:first-child {
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-size: 11px;
-}
-.hero-stat span:last-child {
-  color: var(--text);
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.hero-chips { margin-top: 18px; }
-.chip-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: thin;
-}
-.chip-row-label {
-  font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
-  color: var(--text-dim); margin-right: 4px; min-width: 74px;
-  flex: 0 0 auto;
-}
-.chip-row-empty { color: var(--text-dim); font-size: 13px; margin-top: 10px; }
-
-/* ── Chips ──
-   ECU chips: outline style (identity, not alert) — dark bg, bright text.
-   Violation chips: SOLID danger background + near-black text. This is the
-   direct fix for the "red text on red background" issue — same-hue
-   background+text at different lightness reads as low contrast; solid
-   background + near-black text is unambiguous at any size. */
-.chip {
-  display: inline-block;
-  flex: 0 0 auto;
-  padding: 5px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.chip-ecu {
-  color: var(--accent);
-  background: var(--surface3);
-  border: 1px solid rgba(88,166,255,0.35);
-}
-.chip-violation {
-  color: #1a0505;
-  background: var(--danger);
-  border: 1px solid rgba(0,0,0,0.15);
-}
-.chip-more {
-  color: var(--text-dim);
-  background: var(--surface3);
-  border: 1px dashed var(--border);
-}
-.chip-button {
-  cursor: pointer;
+  background: var(--plane);
+  color: var(--ink);
   font-family: var(--font);
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.chip-button:hover {
-  background: var(--accent);
-  color: var(--bg);
-  border-color: var(--accent);
-}
-.chip-modal { margin: 4px; }
-
-.hero-narrative {
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-  color: var(--text-dim);
-  font-size: 13px;
-  line-height: 1.7;
-  max-height: 64px;
-  overflow-y: auto;
-}
-
-/* ── Body: two columns ──
-   Right column narrowed (was 1:2, now roughly 2:5) — alert rows are
-   compact left-aligned clusters now, not spread across the full column
-   width, so they don't need as much horizontal room to avoid looking
-   sparse. */
-#body-grid {
-  display: flex;
-  gap: 18px;
-  padding: 18px 28px;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-#body-left {
-  flex: 5;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  gap: 18px;
-}
-
-#body-right {
-  flex: 2;
-  min-width: 300px;
-  max-width: 420px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  gap: 18px;
-}
-
-.panel-row {
-  display: flex;
-  gap: 18px;
-  flex: 0 0 auto;
-}
-.panel-row .panel { flex: 1; margin-bottom: 0; }
-
-/* This row (Top Anomalous ECUs + Detection Method) grows to fill
-   whatever vertical space is left in the left column, instead of sizing
-   to its own content and leaving blank space below it — that was the
-   "bottom space not being utilized" gap. */
-.panel-row-fill {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-.panel-fill {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-/* ── Panels ── */
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 18px;
-  margin-bottom: 18px;
-  box-shadow: var(--shadow-out);
-}
-
-.panel-grow {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  margin-bottom: 0;
-}
-
-.panel-compact { margin-bottom: 0; }
-
-.panel-chart {
-  flex: 0 0 auto;
-  margin-bottom: 0;
-}
-
-.panel-title {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-dim);
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 10px;
-  margin-bottom: 14px;
-  flex: 0 0 auto;
-}
-.panel-title-note {
-  color: var(--text-dim);
-  font-size: 11px;
-  text-transform: none;
-  letter-spacing: normal;
-  font-weight: 500;
-}
-
-.empty-note { color: var(--text-dim); font-size: 13px; }
-
-.alerts-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-/* ── Top anomalous ECUs list ── */
-.top-ecus-list { flex: 1; overflow-y: auto; }
-.top-ecu-item { margin-bottom: 14px; }
-.top-ecu-item:last-child { margin-bottom: 0; }
-.top-ecu-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-.top-ecu-name { color: var(--accent); font-weight: 700; font-size: 13px; }
-.top-ecu-value { color: var(--text-dim); font-size: 13px; }
-
-/* ── Alert rows — compact left-aligned cluster, no far-right spread ── */
-.alert-row {
-  border-left: 3px solid var(--border);
-  padding: 10px 14px;
-  margin-bottom: 10px;
-  background: var(--surface2);
-  border-radius: 0 10px 10px 0;
-  box-shadow: var(--shadow-in);
-  font-size: 13px;
-}
-.alert-row:last-child { margin-bottom: 0; }
-
-.alert-row.critical { border-color: var(--danger); }
-.alert-row.high     { border-color: var(--warn);   }
-.alert-row.medium   { border-color: var(--accent);  }
-.alert-row.low      { border-color: var(--accent2); }
-
-.alert-row-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.alert-node  { color: var(--accent); font-weight: 700; font-size: 13px; }
-.alert-conf  { color: var(--text-dim); font-size: 12px; }
-.alert-row-tags { margin-top: 8px; }
-
-/* ── Pills (severity / detector attribution) — solid bg + near-black text
-   for anything alert-semantic, matching the chip fix above. ── */
-.pill {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 700;
-}
-.pill--critical { background: var(--danger); color: #1a0505; }
-.pill--high     { background: var(--warn);   color: #1a1300; }
-.pill--medium   { background: var(--accent);  color: #04101c; }
-.pill--low      { background: var(--accent2); color: #04140a; }
-.pill--detector {
-  background: var(--surface3);
-  color: var(--text-dim);
-  border: 1px solid var(--border);
-  text-transform: none;
-  font-weight: 600;
-}
-
-/* ── Violation tags (inside alert rows — smaller, secondary to the pills) ── */
-.vtag {
-  display: inline-block;
-  background: var(--surface3);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 2px 8px;
-  font-size: 11px;
-  margin: 2px 4px 0 0;
-  color: var(--text-dim);
-}
-
-/* ── LSTM status badge ── */
-.lstm-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 700;
-}
-.lstm-badge.training { background: #2d2a1a; color: var(--warn);   border: 1px solid var(--warn);   }
-.lstm-badge.ready    { background: #1a2d1e; color: var(--accent2); border: 1px solid var(--accent2); }
-
-/* ── Risk bars ── */
-.risk-bar-bg {
-  background: var(--surface3);
-  border-radius: 4px;
-  height: 8px;
-  box-shadow: var(--shadow-in);
-}
-.risk-bar-fill {
-  height: 8px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, var(--accent2), var(--warn), var(--danger));
-  transition: width 0.4s ease;
-}
-
-/* ── ECU modal ── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.modal-overlay.hidden { display: none; }
-.modal-overlay.visible { display: flex; }
-
-.modal-box {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  box-shadow: var(--shadow-out);
-  width: min(720px, 90vw);
-  max-height: 70vh;
-  display: flex;
-  flex-direction: column;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 18px 22px;
-  border-bottom: 1px solid var(--border);
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  flex: 0 0 auto;
-}
-.modal-close {
-  background: var(--surface3);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  border-radius: 8px;
-  width: 30px;
-  height: 30px;
-  font-size: 14px;
-  cursor: pointer;
-  font-family: var(--font);
-}
-.modal-close:hover { color: var(--text); background: var(--danger); }
-.modal-body {
-  padding: 18px 22px;
+
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+/* ── Shell ───────────────────────────────────────────────────────────── */
+
+#console-root {
+  height: 100vh;
+  display: grid;
+  grid-template-rows: 52px auto minmax(0, 1fr);
+  gap: 18px;
+  padding: 16px 20px 20px;
+  /* The deck row is `auto`, and its height moves with the length of the
+     advisory text. On a short viewport that pushed the body grid past the
+     bottom of a `100vh` box under `body { overflow: hidden }`, so the chart
+     and the alert stream were not just small, they were unreachable. A
+     scrollbar is a worse look and a much better console. */
   overflow-y: auto;
 }
-.modal-chip-grid {
+
+/* ── Command bar ─────────────────────────────────────────────────────── */
+
+#commandbar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 20px;
+  padding: 0 20px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--raise-sm);
+  /* The bar now carries identity, navigation, two status chips and three
+     toggles. It shrinks by dropping the least load-bearing items first
+     (subtitle, then the vehicle chip, then the control's own label) rather
+     than by letting anything wrap or overflow. */
+  overflow: hidden;
+}
+#commandbar .bar-group { flex-shrink: 0; }
+#lstm-text { display: inline-block; overflow: hidden; text-overflow: ellipsis;
+             white-space: nowrap; max-width: 190px; }
+
+@media (max-width: 1680px) {
+  #commandbar { gap: 14px; }
+  .mark-sub { display: none; }
+}
+@media (max-width: 1420px) {
+  #commandbar { gap: 10px; padding: 0 14px; }
+  /* The vehicle chip stays: with the subtitle gone, the label dropped and
+     the gaps tightened, the bar fits down to 1280 without losing it. A
+     `.vehicle-chip { display: none }` here would not have worked anyway —
+     `.bar-group`'s own `display: flex` is declared later in this file at
+     equal specificity and wins on source order. */
+  .tab-label { display: none; }
+  #lstm-text { max-width: 96px; }
 }
 
-/* ── Plotly charts ── */
-.modebar { display: none !important; }
+.mark { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex-shrink: 0; }
+.mark-name { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.mark-sub { font-size: 12.5px; color: var(--ink-low); }
+
+.bar-spacer { margin-left: auto; }
+
+.bar-group {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  box-shadow: var(--well-sm);
+  font-size: 12.5px;
+  color: var(--ink-mid);
+}
+
+/* Feed liveness.
+   NOTE: /api/summary's `last_anomaly` is NOT the last anomaly. It is
+   semantic_history[-1].timestamp, i.e. the newest message from ANY ECU.
+   It is a feed heartbeat, so that is what it is labelled and drawn as. */
+.pulse-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--sev-nominal);
+  position: relative;
+  transition: background var(--dur-base) var(--ease);
+}
+.pulse-dot::after {
+  content: ""; position: absolute; inset: -4px;
+  border-radius: 50%; border: 1px solid currentColor;
+  opacity: 0; color: var(--sev-low);
+}
+.feed-live .pulse-dot { background: var(--sev-low); }
+.feed-stale .pulse-dot { background: var(--sev-medium); }
+.feed-down  .pulse-dot { background: var(--sev-critical); }
+
+/* Fires only when the heartbeat actually advances, never on a timer. */
+.pulse-dot.beat::after { animation: beat 700ms var(--ease) 1; }
+@keyframes beat {
+  from { opacity: 0.85; transform: scale(0.7); }
+  to   { opacity: 0;    transform: scale(1.9); }
+}
+
+.lstm-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--det-lstm); }
+.lstm-training .lstm-dot { animation: breathe 2.4s ease-in-out infinite; }
+.lstm-fault .lstm-dot { background: var(--sev-critical); }
+@keyframes breathe { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+.calm-toggle {
+  border: 0; cursor: pointer;
+  font: inherit; font-size: 12.5px;
+  color: var(--ink-mid);
+  background: var(--surface);
+  padding: 7px 15px;
+  border-radius: 999px;
+  box-shadow: var(--raise-sm);
+  transition: box-shadow var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease);
+}
+.calm-toggle { flex-shrink: 0; white-space: nowrap; }
+
+/* ── Theme toggle ────────────────────────────────────────────────────
+   The icon names the mode the click switches *to*: a moon while light, a
+   sun while dark. Both are drawn in CSS rather than set as a glyph —
+   \u2600 and \u263e render as colour emoji on some platforms and as tofu on
+   others, and neither can be tinted. */
+.icon-toggle {
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px;
+  border: 0; cursor: pointer; padding: 0;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--raise-sm);
+  transition: box-shadow var(--dur-quick) var(--ease);
+}
+.icon-toggle:active { box-shadow: var(--press); }
+.icon-toggle:focus-visible { outline: 2px solid var(--det-rule); outline-offset: 2px; }
+
+.theme-icon { display: block; transition: box-shadow var(--dur-base) var(--ease); }
+
+/* Disc plus eight rays, the rays being box-shadow copies shrunk by spread. */
+.mode-sun .theme-icon {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--icon-sun);
+  box-shadow:
+      0px -7px 0 -2.5px var(--icon-sun),
+      0px  7px 0 -2.5px var(--icon-sun),
+      7px  0px 0 -2.5px var(--icon-sun),
+     -7px  0px 0 -2.5px var(--icon-sun),
+      5px -5px 0 -3px   var(--icon-sun),
+     -5px  5px 0 -3px   var(--icon-sun),
+      5px  5px 0 -3px   var(--icon-sun),
+     -5px -5px 0 -3px   var(--icon-sun);
+}
+
+/* Crescent: an offset inset shadow fills the disc everywhere except the
+   sliver the offset leaves behind. */
+.mode-moon .theme-icon {
+  width: 15px; height: 15px; border-radius: 50%;
+  background: transparent;
+  box-shadow: inset -4.5px -2.5px 0 0 var(--icon-moon);
+}
+.calm-toggle:hover { color: var(--ink); }
+.calm-toggle:active { box-shadow: var(--press); }
+.calm-toggle[data-on="true"] { box-shadow: var(--press); color: var(--sev-low); }
+
+/* ── Advisory deck: the hero ─────────────────────────────────────────── */
+
+#advisory-deck {
+  display: grid;
+  grid-template-columns: 200px 220px minmax(0, 1fr);
+  gap: 22px;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--raise-lg);
+  position: relative;
+  transition: background var(--dur-slow) var(--ease);
+}
+
+/* Severity tint. A wash across the deck, never a saturated flood: at
+   3am a full-bleed red panel is the thing that makes people stop looking. */
+#advisory-deck::before {
+  content: "";
+  position: absolute; inset: 0;
+  /* Was relying on the deck's `overflow: hidden` to keep the tint inside
+     the rounded corners. Inheriting the radius does the same job without
+     also clipping every tooltip that tries to leave the deck. */
+  border-radius: inherit;
+  background: var(--tint, transparent);
+  opacity: 0.5;
+  transition: background var(--dur-slow) var(--ease);
+  pointer-events: none;
+}
+#advisory-deck > * { position: relative; z-index: 1; }
+
+.deck--nominal  { --tint: transparent; }
+.deck--low      { --tint: var(--tint-low); }
+.deck--medium   { --tint: var(--tint-medium); }
+.deck--high     { --tint: var(--tint-high); }
+.deck--critical { --tint: var(--tint-critical); }
+
+/* Backend unreachable. Deliberately outside the severity ramp: this is not
+   a severity, it is the absence of a reading. The gauge keeps its last
+   value rather than tweening to zero -- a gauge falling to 0.0 reads as
+   "risk cleared", which is the one thing this state must never say -- but
+   it is dimmed so it cannot be mistaken for a live number. */
+.deck--offline { --tint: var(--tint-offline); }
+.deck--offline .gauge-svg { opacity: 0.4; }
+.deck--offline .gauge-value,
+.deck--offline .gauge-scale,
+.deck--offline .stat-value { color: var(--ink-low); }
+
+/* Gauge sits in a debossed well, folded into the deck rather than
+   competing with it for the page's top-line attention. */
+.gauge-well {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px;
+  padding: 16px 10px 18px;
+  border-radius: var(--radius);
+  box-shadow: var(--well);
+}
+.gauge-wrap { position: relative; width: 140px; height: 140px; }
+.gauge-svg { width: 140px; height: 140px; display: block; }
+.gauge-track { fill: none; stroke: var(--gauge-track); stroke-width: 11; stroke-linecap: round; }
+.gauge-arc {
+  fill: none; stroke: var(--sev-nominal); stroke-width: 11; stroke-linecap: round;
+  stroke-dasharray: 254.5;
+  stroke-dashoffset: 254.5;
+  transition: stroke var(--dur-slow) var(--ease);
+}
+.gauge-readout {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 1px;
+  /* Optical, not geometric, centring. The arc is a 270deg sweep with its
+     gap at the bottom, so the ring's visual mass sits high and a
+     mathematically centred readout reads as crowded against the top of the
+     ring. Half of this padding pushes the block down into the open space
+     the gap leaves. */
+  padding-top: 12px;
+}
+.gauge-value {
+  font-family: var(--font-num); font-variant-numeric: tabular-nums;
+  /* 29px, not 34. The widest value this can ever hold is `100.0`, which at
+     34px renders ~101px wide against the ~91px the ring affords at the
+     digits' vertical band — the number collided with the arc at exactly
+     the moment the number mattered most. At 29px it is ~86px. */
+  font-size: 29px; font-weight: 600; letter-spacing: -0.03em;
+  line-height: 1;
+}
+.gauge-scale { font-size: 11.5px; color: var(--ink-low); }
+.gauge-caption { font-size: 12.5px; color: var(--ink-mid); text-align: center; }
+
+.top-ecus-well {
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  box-shadow: var(--well);
+  display: flex; flex-direction: column;
+  justify-content: center;
+}
+
+.deck-body { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+/* Below ~1500px the three-column deck squeezes the narrative too hard.
+   Drop the ECU meters to a second row rather than shrinking the text. */
+@media (max-width: 1500px) {
+  #advisory-deck { grid-template-columns: 200px minmax(0, 1fr); }
+  /* All three children are placed explicitly. Spanning only .top-ecus-well
+     leaves .deck-body to auto-placement, which drops the narrative into the
+     200px gauge column and grows the deck until the body grid is clipped
+     off the bottom of the viewport. */
+  .gauge-well    { grid-column: 1; grid-row: 1; }
+  .deck-body     { grid-column: 2; grid-row: 1; }
+  .top-ecus-well { grid-column: 1 / -1; grid-row: 2; }
+  /* Scoped to the deck on purpose. `.meter-list` is redefined further down
+     this file with equal specificity, so a bare `.meter-list` here loses to
+     it and the meters keep stacking, which is what made the second deck row
+     roughly twice as tall as it needs to be. */
+  #advisory-deck .meter-list { flex-direction: row; gap: 20px; }
+  #advisory-deck .meter { flex: 1; }
+}
+
+.deck-headline { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.deck-tier {
+  font-size: 19px; font-weight: 600; letter-spacing: -0.015em;
+  color: var(--tier-color, var(--ink));
+  transition: color var(--dur-slow) var(--ease);
+}
+.deck-stamp { font-size: 12.5px; color: var(--ink-low); }
+.deck-stamp .num { color: var(--ink-mid); }
+
+/* The narrative itself: the single largest block of readable text on the
+   page. Measure capped so it stays scannable during an incident. */
+.deck-narrative {
+  font-size: 15px;
+  line-height: 1.62;
+  color: var(--ink);
+  max-width: 76ch;
+}
+.deck-narrative.is-empty { color: var(--ink-mid); }
+
+/* The advisory, with the four parts that duplicate the gauge and the chip
+   rows parsed out (see _advisory_parts in callbacks.py). What is left is
+   the recommended response, which is a short list of distinct instructions
+   and reads as one — running them together as prose was what made the
+   block a wall of text. */
+.deck-advice { display: flex; flex-direction: column; gap: 8px; }
+.advice-line {
+  position: relative;
+  padding-left: 19px;
+  line-height: 1.5;
+}
+.advice-line::before {
+  content: ""; position: absolute;
+  left: 2px; top: 0.56em;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--advice-dot, var(--sev-nominal));
+  transition: background var(--dur-slow) var(--ease);
+}
+/* The marker carries the current tier, so the severity ramp is doing the
+   same job here it does everywhere else. */
+.deck--low .advice-line      { --advice-dot: var(--sev-low); }
+.deck--medium .advice-line   { --advice-dot: var(--sev-medium); }
+.deck--high .advice-line     { --advice-dot: var(--sev-high); }
+.deck--critical .advice-line { --advice-dot: var(--sev-critical); }
+/* In the drawer there is no deck tier to inherit from, so the marker falls
+   back to the neutral token rather than picking up whatever the deck is
+   showing for a different alert. */
+#drawer .advice-line { --advice-dot: var(--sev-nominal); }
+
+/* Whether the model was trained when this advisory was written. Frozen at
+   alert-creation time, so it is not the same fact as the command bar's
+   live model badge. */
+.advice-mode { color: var(--ink-mid); }
+
+/* ── Hover detail ────────────────────────────────────────────────────
+   `data-tip` rather than `title`: the native tooltip has a half-second
+   delay, cannot be styled, and would look like a different application. */
+[data-tip] { position: relative; }
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 9px); left: 50%;
+  transform: translateX(-50%) translateY(3px);
+  white-space: pre;                 /* the text is built with \n */
+  font-family: var(--font);
+  font-size: 11.5px; line-height: 1.55;
+  color: var(--ink);
+  background: var(--surface-hi);
+  padding: 8px 11px;
+  border-radius: var(--radius-xs);
+  box-shadow: var(--raise), 0 0 0 1px var(--rule);
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-quick) var(--ease),
+              transform var(--dur-quick) var(--ease);
+  z-index: 60;
+}
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+/* Inside the overflow modal there is nothing above a chip to grow into. */
+.tip-below[data-tip]::after {
+  bottom: auto; top: calc(100% + 9px);
+  transform: translateX(-50%) translateY(-3px);
+}
+.tip-below[data-tip]:hover::after { transform: translateX(-50%) translateY(0); }
+
+/* ── Tied top ECUs ───────────────────────────────────────────────────
+   Three meters all reading 100 is three copies of one fact. */
+.tie-well { display: flex; flex-direction: column; gap: 9px; }
+.tie-head { display: flex; align-items: baseline; gap: 8px; }
+.tie-count {
+  font-size: 30px; font-weight: 600; letter-spacing: -0.02em;
+  line-height: 1; color: var(--ink);
+}
+.tie-scale { font-size: 12.5px; color: var(--ink-mid); }
+.tie-note { font-size: 12px; line-height: 1.5; color: var(--ink-mid); }
+.tie-note--dim { color: var(--ink-low); }
+/* The label used to sit inline with the chips, so once they wrapped the
+   second and third hung off a left edge the first one did not share. */
+.tie-label { font-size: 11.5px; color: var(--ink-low); }
+.tie-critical { display: flex; flex-direction: column; gap: 6px; }
+/* One chip per line is all that fits in a 220px well, so they are laid out
+   as rows rather than as a wrapped row that only ever wraps. Full width
+   gives them a shared left and right edge and an obvious hit area. */
+.tie-chips {
+  display: flex; flex-direction: column; gap: 2px;
+  /* Pulled out by the chip's own horizontal padding so the ECU names sit
+     flush with the "Safety-critical" label above them. Without this the
+     rows are indented by 11px against a label they belong to, which reads
+     as a mistake when the chip body is invisible at rest. */
+  margin: 0 -11px;
+}
+.tie-chips .chip {
+  width: 100%; box-sizing: border-box;
+  text-align: left;
+  color: var(--ink);
+  border-radius: var(--radius-xs);
+  box-shadow: none;
+  transition: box-shadow var(--dur-quick) var(--ease);
+}
+.tie-chips .chip:hover { box-shadow: var(--well-sm); }
+
+.deck-chips { display: flex; flex-direction: column; gap: 7px; }
+.chip-line { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.chip-line-label { font-size: 12px; color: var(--ink-low); min-width: 72px; flex-shrink: 0; }
+/* The chips are the only part of the row that is rebuilt on a poll; the
+   label and the overflow button around them are static. */
+.chip-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+
+.chip {
+  font-size: 12px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  color: var(--ink-mid);
+  box-shadow: var(--well-sm);
+  white-space: nowrap;
+}
+.chip-cross { color: var(--accent-cross); }
+.chip-violation { color: var(--accent-violation); }
+.chip-more {
+  border: 0; cursor: pointer; font: inherit; font-size: 12px;
+  background: var(--surface); color: var(--ink-mid);
+  padding: 4px 11px; border-radius: 999px;
+  box-shadow: var(--raise-sm);
+  transition: box-shadow var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease);
+}
+.chip-more:hover { color: var(--ink); }
+.chip-more:active { box-shadow: var(--press); }
+
+.deck-stats { display: flex; gap: 12px; margin-top: 2px; }
+.stat-well {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--well-sm);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.stat-label { font-size: 11.5px; color: var(--ink-low); }
+.stat-value {
+  font-family: var(--font-num); font-variant-numeric: tabular-nums;
+  font-size: 19px; font-weight: 600; letter-spacing: -0.02em;
+}
+.stat-value.dim { color: var(--ink-mid); font-size: 17px; }
+
+/* ── Body grid ───────────────────────────────────────────────────────── */
+
+/* ── Views ───────────────────────────────────────────────────────────
+   The switcher lives in the command bar. A row of its own cost 45px of
+   vertical space to do a job the top bar had ~700px of dead width for.
+
+   The panels inside a pane are still never created or destroyed at
+   runtime; the whole tab set is built once and only its visibility
+   changes. What moves here is under the operator's own hand, not the
+   data's: a panel that rearranges itself because a number changed is
+   disorienting mid-incident, a panel that moves because you clicked is
+   not. */
+
+#console-body {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  /* A floor, not `0`. The row track is `1fr` of whatever the deck leaves
+     over, and on a short viewport that is a chart panel a few dozen pixels
+     tall. Below this the panels stop being readable, so let #console-root
+     scroll rather than crush them. */
+  min-height: 280px;
+}
+
+#tab-bar { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+/* Same label the stream's segmented controls carry. Naming the control is
+   most of what makes a row of buttons read as a control at all. */
+.tab-label {
+  font-size: 11.5px; color: var(--ink-low);
+  margin-right: 3px;
+}
+
+.view-tab {
+  flex: 0 0 auto;
+  position: relative;
+  border: 0; cursor: pointer;
+  font: inherit; font-size: 12.5px;
+  padding: 7px 15px;
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  /* --ink-mid, not --ink-low. At --ink-low these sat at the same contrast
+     the design uses for passive chrome, and read as decoration rather than
+     as something you can click. */
+  color: var(--ink-mid);
+  box-shadow: var(--raise-sm);
+  transition: box-shadow var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease);
+}
+.view-tab:hover { color: var(--ink); }
+.view-tab:active { box-shadow: var(--press); }
+/* Same depth grammar as the segmented controls: selected reads as pressed
+   in, unselected as raised out. Depth alone was too quiet to carry which
+   view is open, so the selected tab also gets an accent rule. */
+.view-tab.is-active { box-shadow: var(--press); color: var(--ink); }
+.view-tab.is-active::after {
+  content: ""; position: absolute;
+  left: 15px; right: 15px; bottom: -5px; height: 2px;
+  border-radius: 2px;
+  background: var(--det-rule);
+}
+.view-tab:focus-visible { outline: 2px solid var(--det-rule); outline-offset: 2px; }
+
+.solo-link {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; margin-left: 2px;
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  color: var(--ink-low);
+  font-size: 13px; text-decoration: none; line-height: 1;
+  box-shadow: var(--raise-sm);
+  transition: box-shadow var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease);
+}
+.solo-link:hover { color: var(--ink); }
+.solo-link:active { box-shadow: var(--press); }
+
+/* Standalone view: the pane on its own, for reading the dense reference
+   tables without an incident running beside them. */
+#console-root.is-solo { grid-template-rows: 52px minmax(0, 1fr); }
+#console-root.is-solo #advisory-deck { display: none; }
+#console-root.is-solo .solo-link { display: none; }
+
+/* Panes are toggled at id specificity rather than with !important, because
+   #body-grid's own `display: grid` would otherwise always win. */
+#body-grid { display: none; }
+#body-grid.is-active {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 366px;
+  gap: 18px;
+  min-height: 0;
+}
+#pane-detection, #pane-evaluation { display: none; }
+#pane-detection.is-active, #pane-evaluation.is-active {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+/* Reference panels size to their content and let the pane scroll, rather
+   than stretching and scrolling internally in three separate places. */
+#pane-detection > .panel, #pane-evaluation > .panel { flex: 0 0 auto; }
+
+#pane-detection::-webkit-scrollbar, #pane-evaluation::-webkit-scrollbar { width: 7px; }
+#pane-detection::-webkit-scrollbar-track,
+#pane-evaluation::-webkit-scrollbar-track { background: transparent; }
+#pane-detection::-webkit-scrollbar-thumb,
+#pane-evaluation::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 999px; }
+
+/* ── Reference tables ────────────────────────────────────────────────
+   Grid rather than <table>: the columns have to hold their widths across
+   two tables with different column counts, and a rule name must never wrap
+   mid-identifier. */
+
+.ref-lede {
+  font-size: 12.5px; line-height: 1.6; color: var(--ink-mid);
+  max-width: 92ch; margin-bottom: 14px;
+}
+
+.ref-table { display: flex; flex-direction: column; gap: 2px; }
+.ref-row {
+  display: grid;
+  gap: 14px;
+  align-items: baseline;
+  padding: 9px 12px;
+  border-radius: var(--radius-xs);
+  font-size: 12.5px;
+}
+.ref-table--rules .ref-row       { grid-template-columns: 224px minmax(0, 1.5fr) 78px 1fr 152px 1fr; }
+.ref-table--consistency .ref-row { grid-template-columns: 240px minmax(0, 2fr) 78px 1fr 152px; }
+.ref-row:not(.ref-row--head):nth-child(even) { box-shadow: var(--well-sm); }
+
+.ref-th { font-size: 11.5px; color: var(--ink-low); }
+.ref-row--head { padding-bottom: 4px; }
+
+.ref-name { font-size: 12px; color: var(--ink); word-break: break-word; }
+.ref-cell { color: var(--ink-mid); line-height: 1.5; }
+
+/* Severity ramp, used here for the same thing it means everywhere else. */
+.ref-sev { font-size: 10.5px; padding: 2px 8px; border-radius: 999px; box-shadow: var(--well-sm); }
+.ref-sev--low      { color: var(--sev-low); }
+.ref-sev--medium   { color: var(--sev-medium); }
+.ref-sev--high     { color: var(--sev-high); }
+.ref-sev--critical { color: var(--sev-critical); }
+
+/* Rules can map to more than one TARA entry, so the cell has to wrap
+   rather than push the next column sideways. */
+.ref-cell--threat { display: flex; flex-wrap: wrap; gap: 5px; }
+.ref-threat {
+  font-family: var(--font-num);
+  font-size: 11px; color: var(--accent-cross);
+  padding: 2px 7px;
+  border-radius: 999px; box-shadow: var(--well-sm);
+  white-space: nowrap;
+}
+
+.ref-gaps { display: flex; flex-direction: column; gap: 9px; }
+.ref-gap {
+  display: grid;
+  grid-template-columns: 104px 280px minmax(0, 1fr);
+  gap: 14px; align-items: baseline;
+  padding: 10px 12px;
+  border-radius: var(--radius-xs);
+  box-shadow: var(--well-sm);
+  font-size: 12.5px;
+}
+.ref-gap-title  { color: var(--ink); }
+.ref-gap-status { color: var(--ink-mid); line-height: 1.5; }
+
+/* ── Evaluation ──────────────────────────────────────────────────────── */
+
+.eval-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.eval-tile {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--well-sm);
+}
+.eval-value { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
+.eval-detail { font-size: 11.5px; color: var(--ink-mid); line-height: 1.5; }
+
+/* A result is good, concerning or bad — the same axis the severity ramp
+   already encodes, so it uses the same three hues rather than inventing a
+   fourth scale that means almost the same thing. */
+.tone--good { color: var(--sev-low); }
+.tone--warn { color: var(--sev-medium); }
+.tone--bad  { color: var(--sev-critical); }
+
+.eval-finding {
+  position: relative;
+  padding-left: 15px;
+  margin-bottom: 11px;
+}
+.eval-finding::before {
+  content: ""; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 3px;
+  border-radius: 3px;
+  background: var(--edge, var(--sev-nominal));
+}
+.eval-finding.tone--good { --edge: var(--sev-low); }
+.eval-finding.tone--warn { --edge: var(--sev-medium); }
+.eval-finding.tone--bad  { --edge: var(--sev-critical); }
+/* The tone belongs to the rule at the edge, not to the body text, which
+   still has to be read at full contrast. */
+.eval-finding .finding-type { color: var(--ink); margin-bottom: 6px; line-height: 1.45; }
+.eval-finding .finding-detail { max-width: 96ch; }
+
+@media (max-width: 1500px) {
+  .eval-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ref-table--rules .ref-row       { grid-template-columns: 200px minmax(0, 1.4fr) 74px 1fr 140px 1fr; }
+  .ref-table--consistency .ref-row { grid-template-columns: 210px minmax(0, 2fr) 74px 1fr 140px; }
+  .ref-gap { grid-template-columns: 96px 220px minmax(0, 1fr); }
+}
+
+#col-analysis {
+  display: grid;
+  grid-template-rows: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 18px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.split-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  min-height: 0;
+}
+
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--raise);
+  padding: 16px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.panel-head {
+  display: flex; align-items: baseline; gap: 10px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.panel-title { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.panel-note { font-size: 12px; color: var(--ink-low); margin-left: auto; }
+
+.panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+.empty-note {
+  color: var(--ink-low); font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  flex: 1; text-align: center; padding: 12px;
+}
+
+/* ── Violation rate: HTML bars, not Plotly ───────────────────────────
+   CSS height transitions glide between polls. A Plotly redraw every 2s
+   snaps, and snapping is what makes a live dashboard feel cheap. */
+
+.rate-chart {
+  flex: 1; min-height: 0;
+  /* .panel-body sets flex-direction: column. Without restating row here the
+     buckets stack vertically and overflow the panel, which also pushed the
+     whole console-root grid past 100vh under body { overflow: hidden }. */
+  display: flex; flex-direction: row; align-items: flex-end; gap: 10px;
+  padding: 6px 2px 0;
+}
+.rate-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; height: 100%; }
+.rate-track {
+  flex: 1; width: 100%;
+  border-radius: var(--radius-xs);
+  box-shadow: var(--well-sm);
+  display: flex; align-items: flex-end;
+  overflow: hidden;
+  min-height: 0;
+}
+.rate-fill {
+  width: 100%;
+  border-radius: var(--radius-xs);
+  background: var(--sev-nominal);
+  transition: height var(--dur-slow) var(--ease), background var(--dur-base) var(--ease);
+  min-height: 2px;
+}
+.rate-fill.has-hits { background: var(--sev-high); }
+.rate-count {
+  font-family: var(--font-num); font-variant-numeric: tabular-nums;
+  font-size: 12px; color: var(--ink-mid);
+}
+.rate-time { font-size: 10.5px; color: var(--ink-low); }
+
+/* ── Detector attribution + top ECUs share the meter language ────────── */
+
+.seg-bar {
+  display: flex; height: 14px; width: 100%;
+  border-radius: 999px; overflow: hidden;
+  box-shadow: var(--well-sm);
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+.seg {
+  transition: width var(--dur-slow) var(--ease), background var(--dur-base) var(--ease);
+  min-width: 0;
+}
+.seg-legend { display: flex; flex-direction: column; gap: 8px; }
+.seg-legend-row { display: flex; align-items: center; gap: 9px; font-size: 12.5px; }
+.seg-swatch { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+.seg-name { color: var(--ink-mid); }
+.seg-count {
+  margin-left: auto;
+  font-family: var(--font-num); font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.meter-list { display: flex; flex-direction: column; gap: 13px; }
+.meter { display: flex; flex-direction: column; gap: 6px; }
+.meter[data-tip] { padding: 2px 0; }
+.meter-head { display: flex; align-items: baseline; gap: 10px; }
+.meter-name {
+  font-size: 12.5px; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.meter-value {
+  margin-left: auto;
+  font-family: var(--font-num); font-variant-numeric: tabular-nums;
+  font-size: 12.5px; color: var(--ink-mid);
+}
+.meter-track {
+  height: 9px; border-radius: 999px;
+  box-shadow: var(--well-sm);
+  overflow: hidden;
+}
+.meter-fill {
+  height: 100%; border-radius: 999px;
+  transition: width var(--dur-slow) var(--ease), background var(--dur-base) var(--ease);
+}
+
+/* ── Alert stream ────────────────────────────────────────────────────── */
+
+#col-stream { display: flex; flex-direction: column; min-height: 0; }
+
+.stream-controls {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-bottom: 12px; flex-shrink: 0;
+}
+.control-row { display: flex; align-items: center; gap: 10px; }
+.control-label { font-size: 11.5px; color: var(--ink-low); min-width: 42px; }
+
+/* Segmented control. Real buttons with the active state set server-side,
+   so selection never depends on :has() being available. Selected reads as
+   pressed IN, unselected as raised OUT: the depth is the state. */
+.segmented { display: flex; gap: 5px; flex: 1; }
+.seg-button {
+  flex: 1; cursor: pointer;
+  border: 0; font: inherit; font-size: 11.5px;
+  padding: 6px 4px;
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  color: var(--ink-low);
+  box-shadow: var(--raise-sm);
+  transition: box-shadow var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease);
+  user-select: none;
+}
+.seg-button:hover { color: var(--ink-mid); }
+.seg-button:active { box-shadow: var(--press); }
+.seg-button.is-active { box-shadow: var(--press); color: var(--ink); }
+.seg-button:focus-visible { outline: 2px solid var(--det-rule); outline-offset: 2px; }
+
+.stream-scroll {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 9px;
+  padding: 3px 6px 3px 3px;
+  margin-right: -4px;
+}
+.stream-scroll::-webkit-scrollbar { width: 7px; }
+.stream-scroll::-webkit-scrollbar-track { background: transparent; }
+.stream-scroll::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb); border-radius: 999px;
+}
+.stream-scroll::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
+
+.alert-card {
+  border: 0; text-align: left; width: 100%;
+  font: inherit; cursor: pointer;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--raise-sm);
+  padding: 11px 13px 12px;
+  display: flex; flex-direction: column; gap: 8px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow var(--dur-quick) var(--ease), transform var(--dur-quick) var(--ease);
+}
+.alert-card:hover { transform: translateX(-2px); }
+.alert-card:active { box-shadow: var(--press); transform: none; }
+.alert-card:focus-visible { outline: 2px solid var(--det-rule); outline-offset: 2px; }
+
+/* Severity edge: a soft inner glow off the left, not a hard 1px border. */
+.alert-card::before {
+  content: ""; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--edge, var(--sev-nominal));
+  transition: background var(--dur-base) var(--ease);
+}
+.sev--low      { --edge: var(--sev-low); }
+.sev--medium   { --edge: var(--sev-medium); }
+.sev--high     { --edge: var(--sev-high); }
+.sev--critical { --edge: var(--sev-critical); }
+
+.alert-top { display: flex; align-items: center; gap: 8px; }
+.alert-node {
+  font-size: 12.5px; font-weight: 600; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.alert-conf {
+  margin-left: auto; flex-shrink: 0;
+  font-family: var(--font-num); font-variant-numeric: tabular-nums;
+  font-size: 12.5px; color: var(--ink-mid);
+}
+.alert-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.tag {
+  font-size: 10.5px; padding: 2px 8px;
+  border-radius: 999px; box-shadow: var(--well-sm);
+  color: var(--ink-mid); white-space: nowrap;
+}
+.tag-sev { color: var(--edge); }
+.tag-det-rule    { color: var(--det-rule); }
+.tag-det-lstm    { color: var(--det-lstm); }
+.tag-det-both    { color: var(--det-both); }
+.tag-det-unknown { color: var(--det-unknown); }
+.alert-time { font-size: 11px; color: var(--ink-low); margin-left: auto; }
+
+/* Arrival, exactly once per alert_id. motion.js decides who gets this
+   class; CSS never re-fires it on the 2s poll. */
+.alert-card.is-entering { animation: arrive var(--dur-base) var(--ease) 1; }
+@keyframes arrive {
+  from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Recency: decays over ~6s, then the card rests. No permanent blinking. */
+.alert-card.is-fresh { box-shadow: var(--raise-sm), 0 0 0 1px color-mix(in srgb, var(--edge) 40%, transparent); }
+.alert-card.is-fresh::after {
+  content: ""; position: absolute; inset: 0;
+  background: var(--edge); opacity: 0.07;
+  animation: settle 6s var(--ease) forwards;
+  pointer-events: none;
+}
+@keyframes settle { to { opacity: 0; } }
+
+/* Severity escalation on an ECU already in the list: one pulse, not a loop. */
+.alert-card.is-escalating { animation: escalate 900ms var(--ease) 1; }
+@keyframes escalate {
+  0%   { box-shadow: var(--raise-sm); }
+  35%  { box-shadow: var(--raise-sm), 0 0 0 3px color-mix(in srgb, var(--edge) 55%, transparent); }
+  100% { box-shadow: var(--raise-sm); }
+}
+
+/* ── Drawer ──────────────────────────────────────────────────────────── */
+
+#drawer-scrim {
+  position: fixed; inset: 0;
+  background: var(--scrim);
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease);
+  z-index: 40;
+}
+#drawer-scrim.open { opacity: 1; pointer-events: auto; }
+
+#drawer {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: min(470px, 92vw);
+  background: var(--surface);
+  box-shadow: var(--drawer-shadow);
+  transform: translateX(102%);
+  transition: transform var(--dur-base) var(--ease);
+  z-index: 41;
+  display: flex; flex-direction: column;
+  padding: 22px 24px;
+  overflow-y: auto;
+}
+#drawer.open { transform: none; }
+
+.drawer-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.drawer-title { font-size: 16px; font-weight: 600; }
+.drawer-close {
+  margin-left: auto; border: 0; cursor: pointer;
+  font: inherit; font-size: 13px; color: var(--ink-mid);
+  background: var(--surface);
+  width: 32px; height: 32px; border-radius: 50%;
+  box-shadow: var(--raise-sm);
+  transition: box-shadow var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease);
+}
+.drawer-close:hover { color: var(--ink); }
+.drawer-close:active { box-shadow: var(--press); }
+
+.drawer-section { margin-bottom: 20px; }
+.drawer-section-title { font-size: 12px; color: var(--ink-low); margin-bottom: 9px; }
+
+/* ── Alert detail ────────────────────────────────────────────────────
+   Was six key/value rows of equal weight, so the drawer opened with no
+   focal point: which ECU, how bad and how sure were three lookups rather
+   than one glance. Now the identity is a headline, the confidence is a
+   readout with the same meter language used in the deck, and the rest is
+   supporting detail underneath. */
+.dr-head {
+  padding: 14px 16px 16px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--well-sm);
+  margin-bottom: 14px;
+}
+.dr-title-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.dr-ecu {
+  font-size: 19px; font-weight: 600; letter-spacing: -0.015em;
+  color: var(--ink); word-break: break-word;
+}
+.dr-sev { font-size: 12.5px; }
+.dr-role { font-size: 12.5px; color: var(--ink-mid); margin-top: 3px; }
+
+.dr-conf { margin-top: 14px; }
+.dr-metric-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 7px; }
+.dr-metric-label { font-size: 11.5px; color: var(--ink-low); margin-right: auto; }
+.dr-metric-value {
+  font-size: 21px; font-weight: 600; letter-spacing: -0.02em;
+  line-height: 1; color: var(--ink);
+}
+.dr-metric-scale { font-size: 11.5px; color: var(--ink-low); }
+
+.dr-facts { display: flex; flex-direction: column; gap: 7px; margin-bottom: 20px; }
+.dr-fact { display: flex; align-items: baseline; gap: 12px; font-size: 12.5px; }
+.dr-fact-key { color: var(--ink-low); min-width: 92px; }
+.dr-fact-val { color: var(--ink); word-break: break-word; }
+
+.dr-footer {
+  margin-top: 4px; padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-size: 11px; color: var(--ink-low); word-break: break-all;
+}
+
+.finding-ecu-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
+
+.finding {
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--well-sm);
+  margin-bottom: 9px;
+}
+.finding-top { display: flex; align-items: center; gap: 9px; margin-bottom: 5px; }
+.finding-type { font-size: 13px; font-weight: 600; }
+.finding-detail { font-size: 12.5px; color: var(--ink-mid); line-height: 1.55; }
+.finding-ecus { font-size: 12px; color: var(--ink-low); margin-top: 6px; }
+
+.drawer-narrative {
+  font-size: 13.5px; line-height: 1.62; color: var(--ink-mid);
+  padding: 13px 15px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--well-sm);
+}
+.drawer-narrative.deck-advice { gap: 7px; }
+.drawer-narrative .advice-line { padding-left: 17px; color: var(--ink); }
+.drawer-narrative .advice-line::before { width: 5px; height: 5px; top: 0.6em; }
+
+/* ── ECU overflow modal ──────────────────────────────────────────────── */
+
+#ecu-modal {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--scrim);
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease);
+  z-index: 50;
+}
+#ecu-modal.open { opacity: 1; pointer-events: auto; }
+.modal-box {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--raise-lg);
+  padding: 22px 24px;
+  width: min(680px, 92vw);
+  max-height: 74vh;
+  display: flex; flex-direction: column;
+  transform: translateY(14px) scale(0.985);
+  transition: transform var(--dur-base) var(--ease);
+}
+#ecu-modal.open .modal-box { transform: none; }
+.modal-grid {
+  display: flex; flex-wrap: wrap; gap: 7px;
+  overflow-y: auto; padding-top: 4px;
+}
+
+/* ── Plotly ──────────────────────────────────────────────────────────── */
+
+.js-plotly-plot, .plot-container { flex: 1; min-height: 0; }
+.js-plotly-plot .plotly .modebar { display: none !important; }
